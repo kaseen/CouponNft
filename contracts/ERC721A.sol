@@ -70,19 +70,13 @@ contract ERC721A is IERC721A {
     // The bit mask of the `nextInitialized` bit in packed ownership.
     uint256 private constant _BITMASK_NEXT_INITIALIZED = 1 << 225;
 
-	// The bit position of the `nextInitialized` bit in packed ownership.
+	// TODO: comment
     uint256 private constant _BITPOS_SOULBIND = 226;
-
-    // The bit mask of the `nextInitialized` bit in packed ownership.
     uint256 private constant _BITMASK_SOULBIND = 1 << 226;
 
-	// TODO: EXTRA_DATA change
-
-    // The bit position of `extraData` in packed ownership.
-    uint256 private constant _BITPOS_EXTRA_DATA = 232;
-
-    // Mask of all 256 bits in a packed ownership except the 24 bits for `extraData`.
-    uint256 private constant _BITMASK_EXTRA_DATA_COMPLEMENT = (1 << 232) - 1;
+	uint256 private constant _BITPOS_PERCENTAGE = 232;
+	
+	uint256 private constant _BITPOS_DAYS_VALID = 240;
 
     // The mask of the lower 160 bits for addresses.
     uint256 private constant _BITMASK_ADDRESS = (1 << 160) - 1;
@@ -388,7 +382,8 @@ contract ERC721A is IERC721A {
         ownership.burned = packed & _BITMASK_BURNED != 0;
 		ownership.soulbind = packed & _BITMASK_SOULBIND != 0;
 		// TODO:
-        ownership.extraData = uint24(packed >> _BITPOS_EXTRA_DATA);
+        ownership.percentage = uint8(packed >> _BITPOS_PERCENTAGE);
+		ownership.daysValid = uint16(packed >> _BITPOS_DAYS_VALID);
     }
 
     /**
@@ -566,6 +561,9 @@ contract ERC721A is IERC721A {
 
         if (address(uint160(prevOwnershipPacked)) != from) revert TransferFromIncorrectOwner();
 
+		// Revert if token is soulbind
+		// if(prevOwnershipPacked & _BITPOS_SOULBIND != 0) revert TransferSoulbindToken();
+
         (uint256 approvedAddressSlot, address approvedAddress) = _getApprovedSlotAndAddress(tokenId);
 
         // The nested ifs save around 20+ gas over a compound boolean condition.
@@ -598,8 +596,9 @@ contract ERC721A is IERC721A {
             // - `burned` to `false`.
             // - `nextInitialized` to `true`.
             _packedOwnerships[tokenId] = _packOwnershipData(
-                to,
-                _BITMASK_NEXT_INITIALIZED | _nextExtraData(from, to, prevOwnershipPacked)
+                to,1
+                // TODO 
+				//_BITMASK_NEXT_INITIALIZED | _nextExtraData(from, to, prevOwnershipPacked)
             );
 
             // If the next slot may not have been initialized (i.e. `nextInitialized == false`) .
@@ -750,9 +749,21 @@ contract ERC721A is IERC721A {
      *
      * Emits a {Transfer} event for each mint.
      */
-    function _mint(address to, uint256 quantity, bool soulbind, uint256 timeToLive) internal virtual {
+    function _mint(
+		address to,
+		uint256 quantity,
+		bool soulbind,
+		uint256 percentage,
+		uint256 daysValid
+	) internal virtual {
         uint256 startTokenId = _currentIndex;
         if (quantity == 0) revert MintZeroQuantity();
+
+		// Revert if percentage > 100
+		if(percentage > 100) revert MintInvalidPercentage();
+
+		// Revert if daysValid > 2**16 - 1
+		if(daysValid > 65535) revert MintInvalidDays();
 
         _beforeTokenTransfers(address(0), to, startTokenId, quantity);
 
@@ -775,9 +786,9 @@ contract ERC721A is IERC721A {
             _packedOwnerships[startTokenId] = _packOwnershipData(
                 to,
                 _nextInitializedFlag(quantity) |
-				_soulbindFlag(soulbind) |
-				timeToLive << _BITPOS_EXTRA_DATA
-                //    _nextExtraData(address(0), to, 0)
+                _soulbindFlag(soulbind) |
+				percentage << _BITPOS_PERCENTAGE |
+				daysValid << _BITPOS_DAYS_VALID
             );
 
             uint256 toMasked;
@@ -863,8 +874,9 @@ contract ERC721A is IERC721A {
             // - `burned` to `false`.
             // - `nextInitialized` to `quantity == 1`.
             _packedOwnerships[startTokenId] = _packOwnershipData(
-                to,
-                _nextInitializedFlag(quantity) | _nextExtraData(address(0), to, 0)
+                to, 1
+               // TODO
+			   // _nextInitializedFlag(quantity) | _nextExtraData(address(0), to, 0)
             );
 
             emit ConsecutiveTransfer(startTokenId, startTokenId + quantity - 1, address(0), to);
@@ -893,7 +905,7 @@ contract ERC721A is IERC721A {
         bytes memory _data
     ) internal virtual {
         // TODO
-        _mint(to, quantity, false, 0);
+        _mint(to, quantity, false, 0, 0);
 
         unchecked {
             if (to.code.length != 0) {
@@ -979,8 +991,9 @@ contract ERC721A is IERC721A {
             // - `burned` to `true`.
             // - `nextInitialized` to `true`.
             _packedOwnerships[tokenId] = _packOwnershipData(
-                from,
-                (_BITMASK_BURNED | _BITMASK_NEXT_INITIALIZED) | _nextExtraData(from, address(0), prevOwnershipPacked)
+                from, 1
+				// TODO
+                //(_BITMASK_BURNED | _BITMASK_NEXT_INITIALIZED) | _nextExtraData(from, address(0), prevOwnershipPacked)
             );
 
             // If the next slot may not have been initialized (i.e. `nextInitialized == false`) .
@@ -1013,7 +1026,9 @@ contract ERC721A is IERC721A {
     /**
      * @dev Directly sets the extra data for the ownership data `index`.
      */
-    function _setExtraDataAt(uint256 index, uint24 extraData) internal virtual {
+    /*
+	TODO
+	function _setExtraDataAt(uint256 index, uint24 extraData) internal virtual {
         uint256 packed = _packedOwnerships[index];
         if (packed == 0) revert OwnershipNotInitializedForExtraData();
         uint256 extraDataCasted;
@@ -1023,7 +1038,7 @@ contract ERC721A is IERC721A {
         }
         packed = (packed & _BITMASK_EXTRA_DATA_COMPLEMENT) | (extraDataCasted << _BITPOS_EXTRA_DATA);
         _packedOwnerships[index] = packed;
-    }
+    }*/
 
     /**
      * @dev Called during each token transfer to set the 24bit `extraData` field.
@@ -1039,24 +1054,28 @@ contract ERC721A is IERC721A {
      * - When `to` is zero, `tokenId` will be burned by `from`.
      * - `from` and `to` are never both zero.
      */
-    function _extraData(
+    /*
+	TODO
+	function _extraData(
         address from,
         address to,
         uint24 previousExtraData
-    ) internal view virtual returns (uint24) {}
+    ) internal view virtual returns (uint24) {}*/
 
     /**
      * @dev Returns the next extra data for the packed ownership data.
      * The returned result is shifted into position.
      */
-    function _nextExtraData(
+    /*
+	TODO
+	function _nextExtraData(
         address from,
         address to,
         uint256 prevOwnershipPacked
     ) private view returns (uint256) {
         uint24 extraData = uint24(prevOwnershipPacked >> _BITPOS_EXTRA_DATA);
         return uint256(_extraData(from, to, extraData)) << _BITPOS_EXTRA_DATA;
-    }
+    }*/
 
     // =============================================================
     //                       OTHER OPERATIONS

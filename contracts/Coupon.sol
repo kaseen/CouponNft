@@ -10,12 +10,12 @@ contract Coupon is ERC721A{
 		// TODO
 	}
 
-	function mintSoulbind(address to, uint256 quantity, uint256 timeToLive) public{
-		_mint(to, quantity, true, timeToLive);
+	function mintSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) public{
+		_mint(to, quantity, true, percentage, daysValid);
 	}
 
-	function mintNonSoulbind(address to, uint256 quantity, uint256 timeToLive) public{
-		_mint(to, quantity, false, timeToLive);
+	function mintNonSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) public{
+		_mint(to, quantity, false, percentage, daysValid);
 	}
 
 	function ownershipOf(uint256 tokenId) public view returns(TokenOwnership memory){
