@@ -1,29 +1,26 @@
-const coupon = artifacts.require('Coupon');
+const Coupon = artifacts.require('Coupon');
+const { expect } = require('chai');
 
-contract("FactoryERC1155", async (accounts) => {
+contract('Coupon', async (accounts) => {
 
 	let contractInstance = null;
 
-	before(async () => {
-		contractInstance = await coupon.deployed();
-	})
+	beforeEach(async () => {
+		contractInstance = await Coupon.deployed();
+	});
 
-	it('should mint both soulbind and nonsoulbind tokens', async () => {
-		// Mint 5 coupons to account[0] and 4 to account[1]
-		await contractInstance.mintSoulbind(accounts[0], 5, 0, 0);
-		await contractInstance.mintNonSoulbind(accounts[1], 4, 10, 100);
-	})
+	xit('should revert invalid minting', async () => {
+		// Revert error MintInvalidPercentage()
+		await expect(contractInstance.mintSoulbind(accounts[0], 1, 1000, 10), 'RuntimeError');
 
-	it('transfer token', async () => {
-		// ID:	0	1	2	3	4	5	6	7	8	9	10
-		//		a0	0	0	0	0	a1	0	0	0	0	ptr
-		let tx = await contractInstance.ownershipOf(1);
-		console.log(tx);
+		// Revert error MintInvalidDays()
+		await expect(contractInstance.mintSoulbind(accounts[0], 1, 10, 100000), 'RuntimeError');
+	});
 
-		await contractInstance.transferFrom(accounts[0], accounts[1], 1);
-		
-		tx = await contractInstance.ownershipOf(1);
-		console.log(tx);
+	xit('should revert transfering soulbind token', async () => {
+		await contractInstance.mintSoulbind(accounts[0], 1, 10, 200);
+		// Revert error TransferSoulbindToken()
+		await expect(contractInstance.transferFrom(accounts[0], accounts[1], 0), 'RuntimeError');
 	});
 
 });

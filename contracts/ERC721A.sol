@@ -381,7 +381,6 @@ contract ERC721A is IERC721A {
         ownership.startTimestamp = uint64(packed >> _BITPOS_START_TIMESTAMP);
         ownership.burned = packed & _BITMASK_BURNED != 0;
 		ownership.soulbind = packed & _BITMASK_SOULBIND != 0;
-		// TODO:
         ownership.percentage = uint8(packed >> _BITPOS_PERCENTAGE);
 		ownership.daysValid = uint16(packed >> _BITPOS_DAYS_VALID);
     }
@@ -395,6 +394,19 @@ contract ERC721A is IERC721A {
             owner := and(owner, _BITMASK_ADDRESS)
             // `owner | (block.timestamp << _BITPOS_START_TIMESTAMP) | flags`.
             result := or(owner, or(shl(_BITPOS_START_TIMESTAMP, timestamp()), flags))
+        }
+    }
+
+	/**
+     * @dev Packs ownership data into a single uint256.
+     */
+    function _packTransferData(address owner, uint256 prevOwnershippacked) private pure returns (uint256 result) {
+		uint96 _previousData = uint96(prevOwnershippacked >> _BITPOS_START_TIMESTAMP);
+        assembly {
+            // Mask `owner` to the lower 160 bits, in case the upper bits somehow aren't clean.
+            owner := and(owner, _BITMASK_ADDRESS)
+            // `owner | (_previousData << _BITPOS_START_TIMESTAMP)`.
+            result := or(owner, shl(_BITPOS_START_TIMESTAMP, _previousData))
         }
     }
 
@@ -562,7 +574,7 @@ contract ERC721A is IERC721A {
         if (address(uint160(prevOwnershipPacked)) != from) revert TransferFromIncorrectOwner();
 
 		// Revert if token is soulbind
-		// if(prevOwnershipPacked & _BITPOS_SOULBIND != 0) revert TransferSoulbindToken();
+		if(prevOwnershipPacked & _BITMASK_SOULBIND != 0) revert TransferSoulbindToken();
 
         (uint256 approvedAddressSlot, address approvedAddress) = _getApprovedSlotAndAddress(tokenId);
 
@@ -590,16 +602,13 @@ contract ERC721A is IERC721A {
             --_packedAddressData[from]; // Updates: `balance -= 1`.
             ++_packedAddressData[to]; // Updates: `balance += 1`.
 
+			// TODO: correct description
             // Updates:
             // - `address` to the next owner.
             // - `startTimestamp` to the timestamp of transfering.
             // - `burned` to `false`.
             // - `nextInitialized` to `true`.
-            _packedOwnerships[tokenId] = _packOwnershipData(
-                to,1
-                // TODO 
-				//_BITMASK_NEXT_INITIALIZED | _nextExtraData(from, to, prevOwnershipPacked)
-            );
+            _packedOwnerships[tokenId] = _packTransferData(to, prevOwnershipPacked) | _BITMASK_NEXT_INITIALIZED;
 
             // If the next slot may not have been initialized (i.e. `nextInitialized == false`) .
             if (prevOwnershipPacked & _BITMASK_NEXT_INITIALIZED == 0) {
@@ -1080,6 +1089,15 @@ contract ERC721A is IERC721A {
     // =============================================================
     //                       OTHER OPERATIONS
     // =============================================================
+
+	/**
+     * @dev Casts the address to uint256 without masking.
+     */
+    function _addressToUint256(address value) private pure returns (uint256 result) {
+        assembly {
+            result := value
+        }
+    }
 
     /**
      * @dev Returns the message sender (defaults to `msg.sender`).
