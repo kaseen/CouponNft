@@ -70,13 +70,21 @@ contract ERC721A is IERC721A {
     // The bit mask of the `nextInitialized` bit in packed ownership.
     uint256 private constant _BITMASK_NEXT_INITIALIZED = 1 << 225;
 
-	// TODO: comment
+    // The bit position of the `soulbind` bit in packed ownership.
     uint256 private constant _BITPOS_SOULBIND = 226;
+
+    // The bit mask of the `soulbind` bit in packed ownership.
     uint256 private constant _BITMASK_SOULBIND = 1 << 226;
 
-	uint256 private constant _BITPOS_PERCENTAGE = 232;
-	
-	uint256 private constant _BITPOS_DAYS_VALID = 240;
+    // The bit position of `percentage` in packed ownership.
+    uint256 private constant _BITPOS_PERCENTAGE = 232;
+
+	uint256 private constant _BITMASK_PERCENTAGE = (1 << 8) - 1;
+
+    // The bit position of `daysValid` in packed ownership.
+    uint256 private constant _BITPOS_DAYS_VALID = 240;
+
+	uint256 private constant _BITMASK_DAYS_VALID = (1 << 16) - 1;
 
     // The mask of the lower 160 bits for addresses.
     uint256 private constant _BITMASK_ADDRESS = (1 << 160) - 1;
@@ -113,11 +121,13 @@ contract ERC721A is IERC721A {
     // See {_packedOwnershipOf} implementation for details.
     //
     // Bits Layout:
-    // - [0..159]   `addr`
-    // - [160..223] `startTimestamp`
-    // - [224]      `burned`
-    // - [225]      `nextInitialized`
-    // - [232..255] `extraData`
+    // - [0..159]     `addr`
+    // - [160..223]   `startTimestamp`
+    // - [224]        `burned`
+    // - [225]        `nextInitialized`
+	// - [226]        `soulbind`
+    // - [232..239]   `percentage`
+	// - [240..255]   `daysValid`
     mapping(uint256 => uint256) private _packedOwnerships;
 
     // Mapping owner address to address data.
@@ -401,7 +411,7 @@ contract ERC721A is IERC721A {
      * @dev Packs ownership data into a single uint256.
      */
     function _packTransferData(address owner, uint256 prevOwnershippacked) private pure returns (uint256 result) {
-		uint96 _previousData = uint96(prevOwnershippacked >> _BITPOS_START_TIMESTAMP);
+        uint96 _previousData = uint96(prevOwnershippacked >> _BITPOS_START_TIMESTAMP);
         assembly {
             // Mask `owner` to the lower 160 bits, in case the upper bits somehow aren't clean.
             owner := and(owner, _BITMASK_ADDRESS)
@@ -573,8 +583,8 @@ contract ERC721A is IERC721A {
 
         if (address(uint160(prevOwnershipPacked)) != from) revert TransferFromIncorrectOwner();
 
-		// Revert if token is soulbind
-		if(prevOwnershipPacked & _BITMASK_SOULBIND != 0) revert TransferSoulbindToken();
+        // Revert if token is soulbind
+        if(prevOwnershipPacked & _BITMASK_SOULBIND != 0) revert TransferSoulbindToken();
 
         (uint256 approvedAddressSlot, address approvedAddress) = _getApprovedSlotAndAddress(tokenId);
 
@@ -602,11 +612,12 @@ contract ERC721A is IERC721A {
             --_packedAddressData[from]; // Updates: `balance -= 1`.
             ++_packedAddressData[to]; // Updates: `balance += 1`.
 
-			// TODO: correct description
             // Updates:
             // - `address` to the next owner.
-            // - `startTimestamp` to the timestamp of transfering.
-            // - `burned` to `false`.
+            // - `startTimestamp` to the timestamp of tokenId.
+            // - `burned` to burn flag of tokenId.
+            // - `percentage` to percentage field of tokenId.
+            // - `daysValid` to daysValid field of tokenId.
             // - `nextInitialized` to `true`.
             _packedOwnerships[tokenId] = _packTransferData(to, prevOwnershipPacked) | _BITMASK_NEXT_INITIALIZED;
 
@@ -759,20 +770,20 @@ contract ERC721A is IERC721A {
      * Emits a {Transfer} event for each mint.
      */
     function _mint(
-		address to,
-		uint256 quantity,
-		bool soulbind,
-		uint256 percentage,
-		uint256 daysValid
-	) internal virtual {
+        address to,
+        uint256 quantity,
+        bool soulbind,
+        uint256 percentage,
+        uint256 daysValid
+    ) internal virtual {
         uint256 startTokenId = _currentIndex;
         if (quantity == 0) revert MintZeroQuantity();
 
-		// Revert if percentage > 100
-		if(percentage > 100) revert MintInvalidPercentage();
+        // Revert if percentage > 100
+        if(percentage > 100) revert MintInvalidPercentage();
 
-		// Revert if daysValid > 2**16 - 1
-		if(daysValid > 65535) revert MintInvalidDays();
+        // Revert if daysValid > 2**16 - 1
+        if(daysValid > 65535) revert MintInvalidDays();
 
         _beforeTokenTransfers(address(0), to, startTokenId, quantity);
 
@@ -796,8 +807,8 @@ contract ERC721A is IERC721A {
                 to,
                 _nextInitializedFlag(quantity) |
                 _soulbindFlag(soulbind) |
-				percentage << _BITPOS_PERCENTAGE |
-				daysValid << _BITPOS_DAYS_VALID
+                percentage << _BITPOS_PERCENTAGE |
+                daysValid << _BITPOS_DAYS_VALID
             );
 
             uint256 toMasked;
@@ -994,15 +1005,17 @@ contract ERC721A is IERC721A {
             // This is equivalent to `packed -= 1; packed += 1 << _BITPOS_NUMBER_BURNED;`.
             _packedAddressData[from] += (1 << _BITPOS_NUMBER_BURNED) - 1;
 
+
             // Updates:
-            // - `address` to the last owner.
+            // - `address` to the next owner.
             // - `startTimestamp` to the timestamp of burning.
+            // - `percentage` to percentage field of tokenId.
+            // - `daysValid` to daysValid field of tokenId.
             // - `burned` to `true`.
             // - `nextInitialized` to `true`.
             _packedOwnerships[tokenId] = _packOwnershipData(
-                from, 1
-				// TODO
-                //(_BITMASK_BURNED | _BITMASK_NEXT_INITIALIZED) | _nextExtraData(from, address(0), prevOwnershipPacked)
+                from, 
+                (_BITMASK_BURNED | _BITMASK_NEXT_INITIALIZED) |  prevOwnershipPacked
             );
 
             // If the next slot may not have been initialized (i.e. `nextInitialized == false`) .
@@ -1031,6 +1044,22 @@ contract ERC721A is IERC721A {
     // =============================================================
     //                     EXTRA DATA OPERATIONS
     // =============================================================
+
+    function _getPercentage(uint256 tokenId) internal view returns(uint256){
+        if (!_exists(tokenId)) revert NonexistentToken();
+
+        uint256 ownershipPacked = _packedOwnershipOf(tokenId);
+
+        return (ownershipPacked >> _BITPOS_PERCENTAGE) & _BITMASK_PERCENTAGE;
+    }
+
+    function _getDaysValid(uint256 tokenId) internal view returns(uint256){
+        if (!_exists(tokenId)) revert NonexistentToken();
+
+        uint256 ownershipPacked = _packedOwnershipOf(tokenId);
+
+        return (ownershipPacked >> _BITPOS_DAYS_VALID) & _BITMASK_DAYS_VALID;
+    }
 
     /**
      * @dev Directly sets the extra data for the ownership data `index`.

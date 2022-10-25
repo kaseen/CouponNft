@@ -10,16 +10,33 @@ contract Coupon is ERC721A{
 		// TODO
 	}
 
-	function mintSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) public{
+	function mintSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external {
 		_mint(to, quantity, true, percentage, daysValid);
 	}
 
-	function mintNonSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) public{
+	function mintNonSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external {
 		_mint(to, quantity, false, percentage, daysValid);
 	}
 
-	function ownershipOf(uint256 tokenId) public view returns(TokenOwnership memory){
+	function useCoupon(uint256 tokenId) external {
+		// TODO: require daysValid + timestamp < block.timestamp
+		_burn(tokenId);
+	}
+
+	function ownershipOf(uint256 tokenId) external view returns(TokenOwnership memory){
 		return _ownershipOf(tokenId);
+	}
+
+	function getPercentage(uint256 tokenId) external view returns(uint256){
+		return _getPercentage(tokenId);
+	}
+
+	function getDaysValid(uint256 tokenId) external view returns(uint256){
+		return _getDaysValid(tokenId);
+	}
+
+	function exists(uint256 tokenId) external view returns(bool){
+		return _exists(tokenId);
 	}
 	
 }

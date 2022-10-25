@@ -78,6 +78,7 @@ interface IERC721A {
 	error TransferSoulbindToken();
 	error MintInvalidPercentage();
 	error MintInvalidDays();
+	error NonexistentToken();
 
 
 	// =============================================================

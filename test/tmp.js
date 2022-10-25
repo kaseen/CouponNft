@@ -23,4 +23,14 @@ contract('Coupon', async (accounts) => {
 		await expect(contractInstance.transferFrom(accounts[0], accounts[1], 0), 'RuntimeError');
 	});
 
+	it('should burn token', async () => {
+		// Arrange
+		await contractInstance.mintSoulbind(accounts[0], 1, 11, 201);
+		// Act
+		await contractInstance.useCoupon(0);
+		// Assert
+		const tx = await contractInstance.exists(0);
+		expect(tx).to.equal(false);
+	});
+
 });
