@@ -79,12 +79,8 @@ contract ERC721A is IERC721A {
     // The bit position of `percentage` in packed ownership.
     uint256 private constant _BITPOS_PERCENTAGE = 232;
 
-	uint256 private constant _BITMASK_PERCENTAGE = (1 << 8) - 1;
-
     // The bit position of `daysValid` in packed ownership.
     uint256 private constant _BITPOS_DAYS_VALID = 240;
-
-	uint256 private constant _BITMASK_DAYS_VALID = (1 << 16) - 1;
 
     // The mask of the lower 160 bits for addresses.
     uint256 private constant _BITMASK_ADDRESS = (1 << 160) - 1;
@@ -1044,22 +1040,6 @@ contract ERC721A is IERC721A {
     // =============================================================
     //                     EXTRA DATA OPERATIONS
     // =============================================================
-
-    function _getPercentage(uint256 tokenId) internal view returns(uint256){
-        if (!_exists(tokenId)) revert NonexistentToken();
-
-        uint256 ownershipPacked = _packedOwnershipOf(tokenId);
-
-        return (ownershipPacked >> _BITPOS_PERCENTAGE) & _BITMASK_PERCENTAGE;
-    }
-
-    function _getDaysValid(uint256 tokenId) internal view returns(uint256){
-        if (!_exists(tokenId)) revert NonexistentToken();
-
-        uint256 ownershipPacked = _packedOwnershipOf(tokenId);
-
-        return (ownershipPacked >> _BITPOS_DAYS_VALID) & _BITMASK_DAYS_VALID;
-    }
 
     /**
      * @dev Directly sets the extra data for the ownership data `index`.

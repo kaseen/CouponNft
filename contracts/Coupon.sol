@@ -4,11 +4,17 @@ pragma solidity 0.8.17;
 
 import './ERC721A.sol';
 
-contract Coupon is ERC721A{
+contract Coupon is ERC721A {
+
+	uint256 private constant _SECONDS_IN_ONE_DAY = 24 * 60 * 60;
 
 	constructor(string memory _name, string memory _symbol) ERC721A(_name, _symbol){
 		// TODO
 	}
+
+	error QueryForNonexistentToken();
+	error NotOwner();
+	error CouponExpired();
 
 	function mintSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external {
 		_mint(to, quantity, true, percentage, daysValid);
@@ -19,24 +25,24 @@ contract Coupon is ERC721A{
 	}
 
 	function useCoupon(uint256 tokenId) external {
-		// TODO: require daysValid + timestamp < block.timestamp
+		TokenOwnership memory unpackedOwnership = _ownershipOf(tokenId);
+
+		// Check if tokenId is valid or coupon is already burned.
+		if(!_exists(tokenId)) revert QueryForNonexistentToken();
+
+		// Check if msg.sender is owner of coupon
+		if(unpackedOwnership.addr != msg.sender) revert NotOwner();
+
+		// Check if coupon expired.
+		if(unpackedOwnership.startTimestamp + unpackedOwnership.daysValid * _SECONDS_IN_ONE_DAY < block.timestamp)
+			revert CouponExpired();
+
 		_burn(tokenId);
 	}
 
+	// TODO: Helper function, remove
 	function ownershipOf(uint256 tokenId) external view returns(TokenOwnership memory){
 		return _ownershipOf(tokenId);
-	}
-
-	function getPercentage(uint256 tokenId) external view returns(uint256){
-		return _getPercentage(tokenId);
-	}
-
-	function getDaysValid(uint256 tokenId) external view returns(uint256){
-		return _getDaysValid(tokenId);
-	}
-
-	function exists(uint256 tokenId) external view returns(bool){
-		return _exists(tokenId);
 	}
 	
 }
