@@ -2,6 +2,7 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { expect } = require('chai');
 
 // TODO: expect to emit
+// TODO: after transfer or mint to equal balance 1
 describe('Coupon', () => {
 	const deploy = async () => {
 		const [owner, altAcc] = await hre.ethers.getSigners();
@@ -88,7 +89,23 @@ describe('Coupon', () => {
 			await expect(CouponContract.safeMintSoulbind(NonERC721ReceiverContract.address, 1, 10, 10))
 				.to.be.revertedWithCustomError(CouponContract, 'TransferToNonERC721ReceiverImplementer');
 		});
+		
+		it('Should safeTransfer to ERC721Receiver contract', async () => {
+			const { CouponContract, ERC721ReceiverContract, owner } = await loadFixture(deploy);
 
+			await CouponContract.mintNonSoulbind(owner.address, 1, 10, 10);
+			await CouponContract['safeTransferFrom(address,address,uint256)']
+				(owner.address, ERC721ReceiverContract.address, 0);
+		});
+
+		it('Should revert safeTransfer to NonERC721Receiver contract', async () => {
+			const { CouponContract, NonERC721ReceiverContract, owner } = await loadFixture(deploy);
+
+			await CouponContract.mintNonSoulbind(owner.address, 1, 10, 10);
+			await expect(CouponContract['safeTransferFrom(address,address,uint256)']
+				(owner.address, NonERC721ReceiverContract.address, 0))
+				.to.be.rejectedWith(CouponContract, 'TransferToNonERC721ReceiverImplementer');
+		});
 	});
 
 });

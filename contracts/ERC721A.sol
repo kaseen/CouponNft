@@ -941,7 +941,7 @@ contract ERC721A is IERC721A {
     }
 
     /**
-     * @dev Equivalent to `_safeMint(to, quantity, '')`.
+     * @dev Equivalent to `_safeMint(to, quantity, soulbind, percentage, daysValid, '')`.
      */
     function _safeMint(address to, uint256 quantity, bool soulbind, uint256 percentage, uint256 daysValid) internal virtual {
         _safeMint(to, quantity, soulbind, percentage, daysValid, '');
