@@ -1,12 +1,7 @@
 {
   "name": "coupon-nft",
-  "version": "1.0.0",
-  "main": "index.js",
-  "author": "vukasintasic <vukasin.tasic@ain.rs>",
-  "license": "MIT",
-  "dependencies": {
-    "@truffle/hdwallet-provider": "^2.1.0",
-    "chai": "^4.3.6",
-    "dotenv": "^16.0.3"
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "hardhat": "^2.12.1"
   }
 }

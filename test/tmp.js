@@ -1,48 +1,72 @@
-const Coupon = artifacts.require('Coupon');
+const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { expect } = require('chai');
 
-contract('Coupon', async (accounts) => {
+// TODO: expect to emit
+describe('Coupon', () => {
+	const deploy = async () => {
+		const [owner, altAcc] = await hre.ethers.getSigners();
 
-	let contractInstance = null;
+		const Coupon = await hre.ethers.getContractFactory('Coupon');
+		const CouponContract = await Coupon.deploy('NAME_TEST', 'SYMBOL_TEST');
 
-	beforeEach(async () => {
-		contractInstance = await Coupon.deployed();
+		return { CouponContract, owner, altAcc };
+	}
+
+	describe('Minting', () => {
+		it('Should revert with MintInvalidPercentage', async () => {
+			const { CouponContract, owner } = await loadFixture(deploy);
+
+			await expect(CouponContract.mintSoulbind(owner.address, 1, 1000, 10))
+				.to.be.revertedWithCustomError(CouponContract, 'MintInvalidPercentage');
+
+		});
+		it('Should revert with MintInvalidDays', async () => {
+			const { CouponContract, owner } = await loadFixture(deploy);
+
+			await expect(CouponContract.mintSoulbind(owner.address, 1, 10, 100000))
+				.to.be.revertedWithCustomError(CouponContract, 'MintInvalidDays');
+		});		
 	});
 
-	xit('should revert invalid minting', async () => {
-		// Revert error MintInvalidPercentage()
-		await expect(contractInstance.mintSoulbind(accounts[0], 1, 1000, 10), 'RuntimeError');
+	describe('Transfer', () => {
+		it('Should revert with TransferSoulbindToken', async () => {
+			const { CouponContract, owner, altAcc } = await loadFixture(deploy);
 
-		// Revert error MintInvalidDays()
-		await expect(contractInstance.mintSoulbind(accounts[0], 1, 10, 100000), 'RuntimeError');
+			await CouponContract.mintSoulbind(owner.address, 1, 10, 100);
+	
+			await expect(CouponContract.transferFrom(owner.address, altAcc.address, 0))
+				.to.be.revertedWithCustomError(CouponContract, 'TransferSoulbindToken');
+		});
 	});
 
-	xit('should revert transfering soulbind token', async () => {
-		await contractInstance.mintSoulbind(accounts[0], 1, 10, 200);
-		// Revert error TransferSoulbindToken()
-		await expect(contractInstance.transferFrom(accounts[0], accounts[1], 0), 'RuntimeError');
-	});
+	describe('Other', () => {
+		it('Should revert OwnerQueryForNonexistentToken', async () => {
+			const { CouponContract } = await loadFixture(deploy);
 
-	xit('should revert expired token', async () => {
-		await contractInstance.mintSoulbind(accounts[0], 1, 10, 0);
-		// Wait 5 seconds
-		await new Promise(resolve => setTimeout(resolve, Number(5)*1000));
-		// Revert error CouponExpired()
-		await expect(contractInstance.useCoupon(0), 'RuntimeError');
-	});
+			// Using coupon that has not yet been minted
+			await expect(CouponContract.useCoupon(0))
+				.to.be.revertedWithCustomError(CouponContract, 'OwnerQueryForNonexistentToken');
+		})
 
-	xit('should revert using not ownable coupon', async () => {
-		await contractInstance.mintSoulbind(accounts[0], 1, 10, 10);
-		// Revert error NotOwner()
-		await expect(contractInstance.useCoupon(0, { from: accounts[1] }), 'RuntimeError');
-	});
+		it('Should revert CouponExpired', async () => {
+			const { CouponContract, owner } = await loadFixture(deploy);
 
-	it('should transfer and then use coupon', async () => {
-		await contractInstance.mintNonSoulbind(accounts[0], 1, 10, 10);
-		await contractInstance.transferFrom(accounts[0], accounts[1], 0);
-		// Wait 5 seconds
-		await new Promise(resolve => setTimeout(resolve, Number(5)*1000));
-		await contractInstance.useCoupon(0, { from: accounts[1] });
+			await CouponContract.mintSoulbind(owner.address, 1, 10, 0);
+			// Wait 1 second
+			await new Promise(resolve => setTimeout(resolve, Number(1)*1000));
+
+			await expect(CouponContract.connect(owner).useCoupon(0))
+				.to.be.revertedWithCustomError(CouponContract, 'CouponExpired');
+		});
+
+		it('Should revert NotOwner', async () => {
+			const { CouponContract, owner, altAcc } = await loadFixture(deploy);
+
+			await CouponContract.mintSoulbind(owner.address, 1, 10, 10);
+
+			await expect(CouponContract.connect(altAcc).useCoupon(0))
+				.to.be.revertedWithCustomError(CouponContract, 'NotOwner');
+		});
 	});
 
 });

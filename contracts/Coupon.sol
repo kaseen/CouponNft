@@ -24,6 +24,10 @@ contract Coupon is ERC721A {
 		_mint(to, quantity, false, percentage, daysValid);
 	}
 
+	function getAddr() public view returns(address){
+		return address(this);
+	}
+
 	function useCoupon(uint256 tokenId) external {
 		TokenOwnership memory unpackedOwnership = _ownershipOf(tokenId);
 
