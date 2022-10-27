@@ -24,8 +24,12 @@ contract Coupon is ERC721A {
 		_mint(to, quantity, false, percentage, daysValid);
 	}
 
-	function getAddr() public view returns(address){
-		return address(this);
+	function safeMintSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external {
+		_safeMint(to, quantity, true, percentage, daysValid);
+	}
+
+	function safeMintNonSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external {
+		_safeMint(to, quantity, false, percentage, daysValid);
 	}
 
 	function useCoupon(uint256 tokenId) external {

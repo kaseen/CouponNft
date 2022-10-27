@@ -9,7 +9,13 @@ describe('Coupon', () => {
 		const Coupon = await hre.ethers.getContractFactory('Coupon');
 		const CouponContract = await Coupon.deploy('NAME_TEST', 'SYMBOL_TEST');
 
-		return { CouponContract, owner, altAcc };
+		const ERC721Receiver = await hre.ethers.getContractFactory('ERC721Receiver');
+		const ERC721ReceiverContract = await ERC721Receiver.deploy();
+
+		const NonERC721Receiver = await hre.ethers.getContractFactory('NonERC721Receiver');
+		const NonERC721ReceiverContract = await NonERC721Receiver.deploy();
+
+		return { CouponContract, ERC721ReceiverContract, NonERC721ReceiverContract, owner, altAcc };
 	}
 
 	describe('Minting', () => {
@@ -67,6 +73,22 @@ describe('Coupon', () => {
 			await expect(CouponContract.connect(altAcc).useCoupon(0))
 				.to.be.revertedWithCustomError(CouponContract, 'NotOwner');
 		});
+	});
+
+	describe('ERC721A__IERC721Receiver', () => {
+		it('Should safeMint to ERC721Receiver contract', async () => {
+			const { CouponContract, ERC721ReceiverContract } = await loadFixture(deploy);
+
+			await CouponContract.safeMintSoulbind(ERC721ReceiverContract.address, 1, 10, 10);
+		});
+
+		it('Should revert safeMint to NonERC721Receiver contract', async () => {
+			const { CouponContract, NonERC721ReceiverContract } = await loadFixture(deploy);
+
+			await expect(CouponContract.safeMintSoulbind(NonERC721ReceiverContract.address, 1, 10, 10))
+				.to.be.revertedWithCustomError(CouponContract, 'TransferToNonERC721ReceiverImplementer');
+		});
+
 	});
 
 });
