@@ -16,7 +16,10 @@ describe('Coupon', () => {
 		const NonERC721Receiver = await hre.ethers.getContractFactory('NonERC721Receiver');
 		const NonERC721ReceiverContract = await NonERC721Receiver.deploy();
 
-		return { CouponContract, ERC721ReceiverContract, NonERC721ReceiverContract, owner, altAcc };
+		await CouponContract.mintSoulbind(owner.address, 2, 10, 100);
+		const nextTokenId = await CouponContract.totalSupply();
+
+		return { CouponContract, ERC721ReceiverContract, NonERC721ReceiverContract, owner, altAcc, nextTokenId };
 	}
 
 	describe('Minting', () => {
@@ -37,32 +40,32 @@ describe('Coupon', () => {
 
 	describe('Transfer', () => {
 		it('Should revert with TransferSoulbindToken', async () => {
-			const { CouponContract, owner, altAcc } = await loadFixture(deploy);
+			const { CouponContract, owner, altAcc, nextTokenId } = await loadFixture(deploy);
 
 			await CouponContract.mintSoulbind(owner.address, 1, 10, 100);
 	
-			await expect(CouponContract.transferFrom(owner.address, altAcc.address, 0))
+			await expect(CouponContract.transferFrom(owner.address, altAcc.address, nextTokenId))
 				.to.be.revertedWithCustomError(CouponContract, 'TransferSoulbindToken');
 		});
 	});
 
 	describe('Other', () => {
 		it('Should revert OwnerQueryForNonexistentToken', async () => {
-			const { CouponContract } = await loadFixture(deploy);
+			const { CouponContract, nextTokenId } = await loadFixture(deploy);
 
 			// Using coupon that has not yet been minted
-			await expect(CouponContract.useCoupon(0))
+			await expect(CouponContract.useCoupon(nextTokenId))
 				.to.be.revertedWithCustomError(CouponContract, 'OwnerQueryForNonexistentToken');
 		})
 
 		it('Should revert CouponExpired', async () => {
-			const { CouponContract, owner } = await loadFixture(deploy);
+			const { CouponContract, owner, nextTokenId } = await loadFixture(deploy);
 
 			await CouponContract.mintSoulbind(owner.address, 1, 10, 0);
 			// Wait 1 second
 			await new Promise(resolve => setTimeout(resolve, Number(1)*1000));
 
-			await expect(CouponContract.connect(owner).useCoupon(0))
+			await expect(CouponContract.connect(owner).useCoupon(nextTokenId))
 				.to.be.revertedWithCustomError(CouponContract, 'CouponExpired');
 		});
 
@@ -91,21 +94,28 @@ describe('Coupon', () => {
 		});
 		
 		it('Should safeTransfer to ERC721Receiver contract', async () => {
-			const { CouponContract, ERC721ReceiverContract, owner } = await loadFixture(deploy);
+			const { CouponContract, ERC721ReceiverContract, owner, nextTokenId } = await loadFixture(deploy);
 
 			await CouponContract.mintNonSoulbind(owner.address, 1, 10, 10);
 			await CouponContract['safeTransferFrom(address,address,uint256)']
-				(owner.address, ERC721ReceiverContract.address, 0);
+				(owner.address, ERC721ReceiverContract.address, nextTokenId);
 		});
 
 		it('Should revert safeTransfer to NonERC721Receiver contract', async () => {
-			const { CouponContract, NonERC721ReceiverContract, owner } = await loadFixture(deploy);
+			const { CouponContract, NonERC721ReceiverContract, owner, nextTokenId } = await loadFixture(deploy);
 
 			await CouponContract.mintNonSoulbind(owner.address, 1, 10, 10);
 			await expect(CouponContract['safeTransferFrom(address,address,uint256)']
-				(owner.address, NonERC721ReceiverContract.address, 0))
+				(owner.address, NonERC721ReceiverContract.address, nextTokenId))
 				.to.be.rejectedWith(CouponContract, 'TransferToNonERC721ReceiverImplementer');
 		});
 	});
 
+	describe('Approval', () => {
+		it('bla', async () => {
+			const { CouponContract } = await loadFixture(deploy);
+
+
+		});
+	});
 });

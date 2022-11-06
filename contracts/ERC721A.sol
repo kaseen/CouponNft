@@ -1101,15 +1101,6 @@ contract ERC721A is IERC721A {
     //                       OTHER OPERATIONS
     // =============================================================
 
-	/**
-     * @dev Casts the address to uint256 without masking.
-     */
-    function _addressToUint256(address value) private pure returns (uint256 result) {
-        assembly {
-            result := value
-        }
-    }
-
     /**
      * @dev Returns the message sender (defaults to `msg.sender`).
      *
