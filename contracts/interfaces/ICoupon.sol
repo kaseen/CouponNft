@@ -29,5 +29,6 @@ interface ICoupon {
 	function safeMintNonSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external;
 	function useCoupon(uint256 tokenId) external;
 	function getCouponDiscount(uint256 tokenId) external view returns(uint256);
+	function exists(uint256 tokenId) external view returns(bool);
 	
 }

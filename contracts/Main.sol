@@ -10,7 +10,9 @@ contract Main {
 
 	error OutOf();
 	error NotEnoughFunds();
+	error QueryForNonexistentToken();
 
+	event CouponUsed(address user, uint256 couponId);
 	event CouponMinted(address user);
 
 	ICoupon couponContract;
@@ -23,7 +25,8 @@ contract Main {
 
 	Product[] products;
 	mapping(address => uint256) spentBalances;
-	// maping user to projectId to balance
+
+	// Mapping user to projectId to balance
 	mapping(address => mapping(uint256 => uint256)) productBalances;
 
 	constructor(){
@@ -33,30 +36,32 @@ contract Main {
 		products.push(Product({ name: 'test2', value: 4000000000000000, couponUsable: false }));
 	}
 
-	// ids 0, 0, 1, 2
 	function buyProduct(uint256 productId, uint256 couponId) public payable{
-
 		if(products.length < productId) revert OutOf();
 		if(msg.value < products[productId].value) revert NotEnoughFunds();
-		
-		// TODO: Check coupon id
-		//if(couponId)
 
 		uint256 couponDiscount = couponContract.getCouponDiscount(couponId);
 		uint256 productValue = msg.value;
 
 		if(couponDiscount != 0){
-			//couponContract.useCoupon(couponId);
+			// Also checks if couponId is valid 
+			couponContract.useCoupon(couponId);
 			productValue = (productValue *  couponDiscount) / 100;
+			emit CouponUsed(msg.sender, couponId);
 		}
 		spentBalances[msg.sender] += productValue;
 
 		if(spentBalances[msg.sender] > 1 ether){
 			couponContract.mintSoulbind(msg.sender, 1, 10, 100);
+			spentBalances[msg.sender] = 0;
 			emit CouponMinted(msg.sender);
 		}
 
 		productBalances[msg.sender][productId]++;
+	}
+
+	function getCouponContractAddress() public view returns(address){
+		return address(couponContract);
 	}
 
 	function getSpentBalances(address user) public view returns(uint256){

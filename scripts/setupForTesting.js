@@ -6,7 +6,12 @@ const setupMainContractForTesting = async () => {
 	const MainContract = await Main.deploy();
 	await MainContract.deployed();
 
-	return { MainContract, owner, altAcc };
+	const couponAddress = await MainContract.getCouponContractAddress();
+	const CouponContract = await hre.ethers.getContractAt('Coupon', couponAddress);
+
+	await MainContract.buyProduct(0, 0, { value: ethers.utils.parseUnits('1') });
+
+	return { MainContract, CouponContract, owner, altAcc };
 }
 
 const setupCouponContractForTesting = async () => {

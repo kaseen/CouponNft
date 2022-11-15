@@ -45,7 +45,8 @@ contract Coupon is AccessControl, ERC721A, ICoupon {
 		if(!_exists(tokenId)) revert QueryForNonexistentToken();
 
 		// Check if msg.sender is owner of coupon
-		if(unpackedOwnership.addr != msg.sender) revert NotOwner();
+		// TODO:
+		//if(unpackedOwnership.addr != msg.sender || msg.sender != getApproved(tokenId)) revert NotOwner();
 
 		// Check if coupon expired.
 		if(unpackedOwnership.startTimestamp + unpackedOwnership.daysValid * _SECONDS_IN_ONE_DAY < block.timestamp)
@@ -58,6 +59,13 @@ contract Coupon is AccessControl, ERC721A, ICoupon {
 		if(tokenId == 0)
 			return 0;
 		return _ownershipOf(tokenId).percentage;
+	}
+
+	function exists(uint256 tokenId) external view returns(bool){
+		// '0th' token is used for buying without discount
+		if(tokenId == 0)
+			return true;
+		return _exists(tokenId);
 	}
 
 	// TODO: Helper function, remove

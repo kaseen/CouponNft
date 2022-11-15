@@ -3,7 +3,6 @@ const { setupCouponContractForTesting } = require('../scripts/setupForTesting');
 const { expect } = require('chai');
 
 describe('Coupon', () => {
-
 	describe('Minting', () => {
 		it('Should revert with MintInvalidPercentage', async () => {
 			const { CouponContract, owner } = await loadFixture(setupCouponContractForTesting);
@@ -36,8 +35,7 @@ describe('Coupon', () => {
 			// Using coupon that has not yet been minted
 			await expect(CouponContract.useCoupon(nextTokenId))
 				.to.be.revertedWithCustomError(CouponContract, 'OwnerQueryForNonexistentToken');
-		})
-
+		});
 		it('Should revert CouponExpired', async () => {
 			const { CouponContract, owner, nextTokenId } = await loadFixture(setupCouponContractForTesting);
 
@@ -48,7 +46,6 @@ describe('Coupon', () => {
 			await expect(CouponContract.connect(owner).useCoupon(nextTokenId))
 				.to.be.revertedWithCustomError(CouponContract, 'CouponExpired');
 		});
-
 		it('Should revert NotOwner', async () => {
 			const { CouponContract, ID_NONSOULBIND } = await loadFixture(setupCouponContractForTesting);
 
@@ -65,14 +62,12 @@ describe('Coupon', () => {
 				.to.emit(CouponContract, 'Transfer')
 				.withArgs(ethers.constants.AddressZero, ERC721ReceiverContract.address, nextTokenId);
 		});
-
 		it('Should revert safeMint to NonERC721Receiver contract', async () => {
 			const { CouponContract, NonERC721ReceiverContract } = await loadFixture(setupCouponContractForTesting);
 
 			await expect(CouponContract.safeMintSoulbind(NonERC721ReceiverContract.address, 1, 10, 10))
 				.to.be.revertedWithCustomError(CouponContract, 'TransferToNonERC721ReceiverImplementer');
 		});
-		
 		it('Should safeTransfer to ERC721Receiver contract', async () => {
 			const { CouponContract, ERC721ReceiverContract, owner, nextTokenId } = await loadFixture(setupCouponContractForTesting);
 
@@ -82,7 +77,6 @@ describe('Coupon', () => {
 				.to.emit(CouponContract, 'Transfer')
 				.withArgs(owner.address, ERC721ReceiverContract.address, nextTokenId);
 		});
-
 		it('Should revert safeTransfer to NonERC721Receiver contract', async () => {
 			const { CouponContract, NonERC721ReceiverContract, owner, nextTokenId } = await loadFixture(setupCouponContractForTesting);
 
@@ -111,7 +105,6 @@ describe('Coupon', () => {
 				.to.emit(CouponContract, 'Transfer')
 				.withArgs(altAcc.address, owner.address, ID_NONSOULBIND);
 		});
-
 		it('Sould operator approve and transfer', async () => {
 			const { CouponContract, owner, altAcc, nextTokenId } = await loadFixture(setupCouponContractForTesting);
 
