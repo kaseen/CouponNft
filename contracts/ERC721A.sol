@@ -4,7 +4,7 @@
 
 pragma solidity ^0.8.4;
 
-import './IERC721A.sol';
+import './interfaces/IERC721A.sol';
 
 /**
  * @dev Interface of ERC721 token receiver.
@@ -160,7 +160,7 @@ contract ERC721A is IERC721A {
      * To change the starting token ID, please override this function.
      */
     function _startTokenId() internal view virtual returns (uint256) {
-        return 0;
+        return 1;
     }
 
     /**
@@ -1038,64 +1038,6 @@ contract ERC721A is IERC721A {
             _burnCounter++;
         }
     }
-
-    // =============================================================
-    //                     EXTRA DATA OPERATIONS
-    // =============================================================
-
-    /**
-     * @dev Directly sets the extra data for the ownership data `index`.
-     */
-    /*
-	TODO
-	function _setExtraDataAt(uint256 index, uint24 extraData) internal virtual {
-        uint256 packed = _packedOwnerships[index];
-        if (packed == 0) revert OwnershipNotInitializedForExtraData();
-        uint256 extraDataCasted;
-        // Cast `extraData` with assembly to avoid redundant masking.
-        assembly {
-            extraDataCasted := extraData
-        }
-        packed = (packed & _BITMASK_EXTRA_DATA_COMPLEMENT) | (extraDataCasted << _BITPOS_EXTRA_DATA);
-        _packedOwnerships[index] = packed;
-    }*/
-
-    /**
-     * @dev Called during each token transfer to set the 24bit `extraData` field.
-     * Intended to be overridden by the cosumer contract.
-     *
-     * `previousExtraData` - the value of `extraData` before transfer.
-     *
-     * Calling conditions:
-     *
-     * - When `from` and `to` are both non-zero, `from`'s `tokenId` will be
-     * transferred to `to`.
-     * - When `from` is zero, `tokenId` will be minted for `to`.
-     * - When `to` is zero, `tokenId` will be burned by `from`.
-     * - `from` and `to` are never both zero.
-     */
-    /*
-	TODO
-	function _extraData(
-        address from,
-        address to,
-        uint24 previousExtraData
-    ) internal view virtual returns (uint24) {}*/
-
-    /**
-     * @dev Returns the next extra data for the packed ownership data.
-     * The returned result is shifted into position.
-     */
-    /*
-	TODO
-	function _nextExtraData(
-        address from,
-        address to,
-        uint256 prevOwnershipPacked
-    ) private view returns (uint256) {
-        uint24 extraData = uint24(prevOwnershipPacked >> _BITPOS_EXTRA_DATA);
-        return uint256(_extraData(from, to, extraData)) << _BITPOS_EXTRA_DATA;
-    }*/
 
     // =============================================================
     //                       OTHER OPERATIONS

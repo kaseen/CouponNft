@@ -1,0 +1,50 @@
+const setupMainContractForTesting = async () => {
+
+	const [owner, altAcc] = await hre.ethers.getSigners();
+
+	const Main = await hre.ethers.getContractFactory('Main');
+	const MainContract = await Main.deploy();
+	await MainContract.deployed();
+
+	return { MainContract, owner, altAcc };
+}
+
+const setupCouponContractForTesting = async () => {
+
+	const [owner, altAcc] = await hre.ethers.getSigners();
+
+	const Coupon = await hre.ethers.getContractFactory('Coupon');
+	const CouponContract = await Coupon.deploy('NAME_TEST', 'SYMBOL_TEST');
+	await CouponContract.deployed();
+
+	const ERC721Receiver = await hre.ethers.getContractFactory('ERC721Receiver');
+	const ERC721ReceiverContract = await ERC721Receiver.deploy();
+	await ERC721ReceiverContract.deployed();
+
+	const NonERC721Receiver = await hre.ethers.getContractFactory('NonERC721Receiver');
+	const NonERC721ReceiverContract = await NonERC721Receiver.deploy();
+	await NonERC721ReceiverContract.deployed();
+
+	await CouponContract.mintSoulbind(altAcc.address, 1, 10, 100);
+	await CouponContract.mintNonSoulbind(altAcc.address, 1, 10, 100);
+
+	const ID_SOULDBIND = 1;
+	const ID_NONSOULBIND = 2;
+	const nextTokenId = Number(await CouponContract.totalSupply()) + 1;
+
+	return { 
+		CouponContract,
+		ERC721ReceiverContract,
+		NonERC721ReceiverContract,
+		owner,
+		altAcc, 
+		ID_SOULDBIND,
+		ID_NONSOULBIND,
+		nextTokenId
+	};
+}
+
+module.exports = {
+	setupMainContractForTesting,
+	setupCouponContractForTesting
+}
