@@ -2,7 +2,7 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { setupCouponContractForTesting } = require('../scripts/setupForTesting');
 const { expect } = require('chai');
 
-describe('Coupon', () => {
+describe('Contract: Coupon.sol', () => {
 	describe('Minting', () => {
 		it('Should revert with MintInvalidPercentage', async () => {
 			const { CouponContract, owner } = await loadFixture(setupCouponContractForTesting);
@@ -50,7 +50,7 @@ describe('Coupon', () => {
 			const { CouponContract, ID_NONSOULBIND } = await loadFixture(setupCouponContractForTesting);
 
 			await expect(CouponContract.useCoupon(ID_NONSOULBIND))
-				.to.be.revertedWithCustomError(CouponContract, 'NotOwner');
+				.to.be.revertedWithCustomError(CouponContract, 'NotApproved');
 		});
 	});
 

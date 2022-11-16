@@ -847,62 +847,6 @@ contract ERC721A is IERC721A {
     }
 
     /**
-     * @dev Mints `quantity` tokens and transfers them to `to`.
-     *
-     * This function is intended for efficient minting only during contract creation.
-     *
-     * It emits only one {ConsecutiveTransfer} as defined in
-     * [ERC2309](https://eips.ethereum.org/EIPS/eip-2309),
-     * instead of a sequence of {Transfer} event(s).
-     *
-     * Calling this function outside of contract creation WILL make your contract
-     * non-compliant with the ERC721 standard.
-     * For full ERC721 compliance, substituting ERC721 {Transfer} event(s) with the ERC2309
-     * {ConsecutiveTransfer} event is only permissible during contract creation.
-     *
-     * Requirements:
-     *
-     * - `to` cannot be the zero address.
-     * - `quantity` must be greater than 0.
-     *
-     * Emits a {ConsecutiveTransfer} event.
-     */
-    function _mintERC2309(address to, uint256 quantity) internal virtual {
-        uint256 startTokenId = _currentIndex;
-        if (to == address(0)) revert MintToZeroAddress();
-        if (quantity == 0) revert MintZeroQuantity();
-        if (quantity > _MAX_MINT_ERC2309_QUANTITY_LIMIT) revert MintERC2309QuantityExceedsLimit();
-
-        _beforeTokenTransfers(address(0), to, startTokenId, quantity);
-
-        // Overflows are unrealistic due to the above check for `quantity` to be below the limit.
-        unchecked {
-            // Updates:
-            // - `balance += quantity`.
-            // - `numberMinted += quantity`.
-            //
-            // We can directly add to the `balance` and `numberMinted`.
-            _packedAddressData[to] += quantity * ((1 << _BITPOS_NUMBER_MINTED) | 1);
-
-            // Updates:
-            // - `address` to the owner.
-            // - `startTimestamp` to the timestamp of minting.
-            // - `burned` to `false`.
-            // - `nextInitialized` to `quantity == 1`.
-            _packedOwnerships[startTokenId] = _packOwnershipData(
-                to, 1
-               // TODO
-			   // _nextInitializedFlag(quantity) | _nextExtraData(address(0), to, 0)
-            );
-
-            emit ConsecutiveTransfer(startTokenId, startTokenId + quantity - 1, address(0), to);
-
-            _currentIndex = startTokenId + quantity;
-        }
-        _afterTokenTransfers(address(0), to, startTokenId, quantity);
-    }
-
-    /**
      * @dev Safely mints `quantity` tokens and transfers them to `to`.
      *
      * Requirements:

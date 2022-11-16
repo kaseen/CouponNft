@@ -1,17 +1,22 @@
-const setupMainContractForTesting = async () => {
+const setupShopContractForTesting = async () => {
 
 	const [owner, altAcc] = await hre.ethers.getSigners();
 
-	const Main = await hre.ethers.getContractFactory('Main');
-	const MainContract = await Main.deploy();
-	await MainContract.deployed();
+	const Shop = await hre.ethers.getContractFactory('Shop');
+	const ShopContract = await Shop.deploy();
+	await ShopContract.deployed();
 
-	const couponAddress = await MainContract.getCouponContractAddress();
+	const couponAddress = await ShopContract.getCouponContractAddress();
 	const CouponContract = await hre.ethers.getContractAt('Coupon', couponAddress);
 
-	await MainContract.buyProduct(0, 0, { value: ethers.utils.parseUnits('1') });
+	// Arrange for minting coupon
+	await ShopContract.buyProduct(0, 0, { value: ethers.utils.parseUnits('1') });
+	// Approve minted coupon
+	await CouponContract.approve(ShopContract.address, 1);
 
-	return { MainContract, CouponContract, owner, altAcc };
+	const ID_COUPON = 1;
+
+	return { ShopContract, CouponContract, owner, altAcc, ID_COUPON };
 }
 
 const setupCouponContractForTesting = async () => {
@@ -50,6 +55,6 @@ const setupCouponContractForTesting = async () => {
 }
 
 module.exports = {
-	setupMainContractForTesting,
+	setupShopContractForTesting,
 	setupCouponContractForTesting
 }

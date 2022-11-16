@@ -2,55 +2,44 @@
 
 pragma solidity 0.8.17;
 
-import '@openzeppelin/contracts/access/AccessControl.sol';
+import '@openzeppelin/contracts/access/Ownable.sol';
 import './interfaces/ICoupon.sol';
 import './ERC721A.sol';
 
-contract Coupon is AccessControl, ERC721A, ICoupon {
-
-	//bytes32 public constant MAIN_CONTRACT = keccak256('MAIN_CONTRACT');
+contract Coupon is Ownable, ERC721A, ICoupon {
 	
 	uint256 private constant _SECONDS_IN_ONE_DAY = 24 * 60 * 60;
 
-	constructor(string memory _name, string memory _symbol) ERC721A(_name, _symbol){
-		_setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-	}
+	constructor(string memory _name, string memory _symbol) ERC721A(_name, _symbol){}
 
-	function mintSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external {
-		if(hasRole(DEFAULT_ADMIN_ROLE, msg.sender) == false) revert NotAuthorized();
+	function mintSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external onlyOwner {
 		_mint(to, quantity, true, percentage, daysValid);
 	}
 
-	function mintNonSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external {
-		if(hasRole(DEFAULT_ADMIN_ROLE, msg.sender) == false) revert NotAuthorized();
+	function mintNonSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external onlyOwner {
 		_mint(to, quantity, false, percentage, daysValid);
 	}
 
-	function safeMintSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external {
-		if(hasRole(DEFAULT_ADMIN_ROLE, msg.sender) == false) revert NotAuthorized();
+	function safeMintSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external onlyOwner {
 		_safeMint(to, quantity, true, percentage, daysValid);
 	}
 
-	function safeMintNonSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external {
-		if(hasRole(DEFAULT_ADMIN_ROLE, msg.sender) == false) revert NotAuthorized();
+	function safeMintNonSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external onlyOwner {
 		_safeMint(to, quantity, false, percentage, daysValid);
 	}
 
-	function useCoupon(uint256 tokenId) external {
-		if(hasRole(DEFAULT_ADMIN_ROLE, msg.sender) == false) revert NotAuthorized();
-
+	function useCoupon(uint256 tokenId) external onlyOwner {
 		TokenOwnership memory unpackedOwnership = _ownershipOf(tokenId);
 
 		// Check if tokenId is valid or coupon is already burned.
-		if(!_exists(tokenId)) revert QueryForNonexistentToken();
-
-		// Check if msg.sender is owner of coupon
-		// TODO:
-		//if(unpackedOwnership.addr != msg.sender || msg.sender != getApproved(tokenId)) revert NotOwner();
+		if(!_exists(tokenId)) revert QueryForNonexistentToken();		
 
 		// Check if coupon expired.
 		if(unpackedOwnership.startTimestamp + unpackedOwnership.daysValid * _SECONDS_IN_ONE_DAY < block.timestamp)
 			revert CouponExpired();
+
+		// Check if coupon is approved by its owner.
+		if(msg.sender != getApproved(tokenId)) revert NotApproved();
 
 		_burn(tokenId);
 	}
@@ -73,8 +62,4 @@ contract Coupon is AccessControl, ERC721A, ICoupon {
 		return _ownershipOf(tokenId);
 	}
 	
-	// TODO: Check if valid
-	function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721A, AccessControl) returns (bool){
-		return super.supportsInterface(interfaceId);
-	}
 }

@@ -4,14 +4,14 @@ pragma solidity 0.8.17;
 interface ICoupon {
 
 	/**
-	 * Token id does not exists.
+	 * Token ID does not exists.
 	 */
 	error QueryForNonexistentToken();
 
 	/**
-	 * Caller is not owner.
+	 * Coupon is not approved by owner.
 	 */
-	error NotOwner();
+	error NotApproved();
 
 	/**
 	 * Coupon expired.
