@@ -22,8 +22,8 @@ contract Shop is Ownable, IShop {
 	uint256 private _QUANTITY_MINTED = 1;
 	uint256 private _MINT_THRESHOLD = 0.1 ether;
 
-	constructor(){
-		couponContract = new Coupon('NAME_TEST', 'SYMBOL_TEST');
+	constructor(string memory name, string memory symbol, string memory uri){
+		couponContract = new Coupon(name, symbol, uri);
 		products.push(Product({ name: 'test', value: 0.1 ether, couponUsable: false }));
 		products.push(Product({ name: 'test1', value: 0.25 ether, couponUsable: true }));
 		products.push(Product({ name: 'test2', value: 0.4 ether, couponUsable: false }));
@@ -62,9 +62,9 @@ contract Shop is Ownable, IShop {
 
 		// Mint new coupon if user exceeds threshold
 		if(spentBalances[msg.sender] >= _MINT_THRESHOLD){
-			couponContract.mintSoulbind(msg.sender, _QUANTITY_MINTED, _COUPON_DISCOUNT, _DAYS_VALID);
+			uint256 mintedId = couponContract.mintSoulbind(msg.sender, _QUANTITY_MINTED, _COUPON_DISCOUNT, _DAYS_VALID);
 			spentBalances[msg.sender] = 0;
-			emit CouponMinted(msg.sender);
+			emit CouponMinted(msg.sender, mintedId);
 		}
 
 		productBalances[msg.sender][productId]++;
@@ -89,6 +89,10 @@ contract Shop is Ownable, IShop {
 	// =============================================================
 	//                  METHODS WITH AUTHORIZATION
 	// =============================================================
+
+	function addProduct(Product memory _product) public onlyOwner{
+		products.push(Product({ name: _product.name, value: _product.value, couponUsable: _product.couponUsable }));
+	}
 
 	function setCouponDiscount(uint256 value) public onlyOwner{
 		if(value == 0 || value > 100) revert InvalidParameter();

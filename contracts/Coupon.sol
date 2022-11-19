@@ -9,23 +9,30 @@ import './ERC721A.sol';
 contract Coupon is Ownable, ERC721A, ICoupon {
 	
 	uint256 private constant _SECONDS_IN_ONE_DAY = 24 * 60 * 60;
+	string private _baseTokenURI;
 
-	constructor(string memory _name, string memory _symbol) ERC721A(_name, _symbol){}
+	constructor(string memory _name, string memory _symbol, string memory baseTokenURI) ERC721A(_name, _symbol){
+		_baseTokenURI = baseTokenURI;
+	}
 
-	function mintSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external onlyOwner {
+	function mintSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external onlyOwner returns(uint256){
 		_mint(to, quantity, true, percentage, daysValid);
+		return _nextTokenId() - 1;
 	}
 
-	function mintNonSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external onlyOwner {
+	function mintNonSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external onlyOwner returns(uint256){
 		_mint(to, quantity, false, percentage, daysValid);
+		return _nextTokenId() - 1;
 	}
 
-	function safeMintSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external onlyOwner {
+	function safeMintSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external onlyOwner returns(uint256){
 		_safeMint(to, quantity, true, percentage, daysValid);
+		return _nextTokenId() - 1;
 	}
 
-	function safeMintNonSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external onlyOwner {
+	function safeMintNonSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external onlyOwner returns(uint256){
 		_safeMint(to, quantity, false, percentage, daysValid);
+		return _nextTokenId() - 1;
 	}
 
 	function useCoupon(uint256 tokenId) external onlyOwner {
@@ -55,11 +62,6 @@ contract Coupon is Ownable, ERC721A, ICoupon {
 		if(tokenId == 0)
 			return true;
 		return _exists(tokenId);
-	}
-
-	// TODO: Helper function, remove
-	function ownershipOf(uint256 tokenId) external view returns(TokenOwnership memory){
-		return _ownershipOf(tokenId);
 	}
 	
 }

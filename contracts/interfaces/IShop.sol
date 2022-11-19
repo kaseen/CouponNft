@@ -17,7 +17,7 @@ interface IShop {
 	/**
 	 * Emitted when new coupon is minted.
 	 */
-	event CouponMinted(address user);
+	event CouponMinted(address user, uint256 couponId);
 
 	/**
 	 * Token ID is invalid.

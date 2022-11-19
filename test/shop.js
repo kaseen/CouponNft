@@ -8,7 +8,7 @@ describe('Contract: Shop.sol', () => {
 
 		await expect(ShopContract["buyProduct(uint256,uint256)"](0, 0, { value: ethers.utils.parseUnits('1') }))
 			.to.emit(ShopContract, 'CouponMinted')
-			.withArgs(owner.address);
+			.withArgs(owner.address, 2);
 	});
 	it('Should revert ProductPriceNotReducible', async () => {
 		const { ShopContract, ID_COUPON } = await loadFixture(setupShopContractForTesting);
@@ -21,5 +21,14 @@ describe('Contract: Shop.sol', () => {
 
 		await expect(ShopContract["buyProduct(uint256,uint256)"](1, ID_COUPON, { value: ethers.utils.parseUnits('1') }))
 			.to.emit(ShopContract, 'CouponUsed');
+	});
+	it('Should revert using same Coupon twice', async () => {
+		const { ShopContract, CouponContract, ID_COUPON } = await loadFixture(setupShopContractForTesting); 
+
+		await expect(ShopContract["buyProduct(uint256,uint256)"](1, ID_COUPON, { value: ethers.utils.parseUnits('1') }))
+			.to.emit(ShopContract, 'CouponUsed');
+
+		await expect(ShopContract["buyProduct(uint256,uint256)"](1, ID_COUPON, { value: ethers.utils.parseUnits('1') }))
+			.to.revertedWithCustomError(CouponContract, 'OwnerQueryForNonexistentToken');
 	});
 });

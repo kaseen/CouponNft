@@ -3,7 +3,7 @@ const setupShopContractForTesting = async () => {
 	const [owner, altAcc] = await hre.ethers.getSigners();
 
 	const Shop = await hre.ethers.getContractFactory('Shop');
-	const ShopContract = await Shop.deploy();
+	const ShopContract = await Shop.deploy('', '', '');
 	await ShopContract.deployed();
 
 	const couponAddress = await ShopContract.getCouponContractAddress();
@@ -25,7 +25,7 @@ const setupCouponContractForTesting = async () => {
 	const [owner, altAcc] = await hre.ethers.getSigners();
 
 	const Coupon = await hre.ethers.getContractFactory('Coupon');
-	const CouponContract = await Coupon.deploy('NAME_TEST', 'SYMBOL_TEST');
+	const CouponContract = await Coupon.deploy('', '', '');
 	await CouponContract.deployed();
 
 	const ERC721Receiver = await hre.ethers.getContractFactory('ERC721Receiver');
