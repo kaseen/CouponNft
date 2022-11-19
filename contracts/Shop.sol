@@ -29,6 +29,10 @@ contract Shop is Ownable, IShop {
 		products.push(Product({ name: 'test2', value: 0.4 ether, couponUsable: false }));
 	}
 
+	function buyProduct(uint256 productId) public payable{
+		buyProduct(productId, 0);
+	}
+
 	function buyProduct(uint256 productId, uint256 couponId) public payable{
 		if(products.length < productId) revert OutOfRange();
 		if(msg.value < products[productId].value) revert NotEnoughFunds();
