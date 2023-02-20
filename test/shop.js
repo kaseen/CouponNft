@@ -4,11 +4,15 @@ const { expect } = require('chai');
 
 describe('Contract: Shop.sol', () => {
 	it('Should emit CouponMinted', async () => {
-		const { ShopContract, owner } = await loadFixture(setupShopContractForTesting);
+		const { ShopContract, CouponContract, buyProducts, owner } = await loadFixture(setupShopContractForTesting);
 
-		await expect(ShopContract["buyProduct(uint256,uint256)"](0, 0, { value: ethers.utils.parseUnits('1') }))
-			.to.emit(ShopContract, 'CouponMinted')
-			.withArgs(owner.address, 2);
+		await buyProducts(5);
+		await expect(ShopContract.mintCoupon())
+			.to.emit(CouponContract, 'Transfer')
+			.withArgs(ethers.constants.AddressZero, owner.address, 2)
+			.to.emit(CouponContract, 'Transfer')
+			.withArgs(ethers.constants.AddressZero, owner.address, 3);
+
 	});
 	it('Should revert ProductPriceNotReducible', async () => {
 		const { ShopContract, ID_COUPON } = await loadFixture(setupShopContractForTesting);

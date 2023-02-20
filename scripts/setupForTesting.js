@@ -9,15 +9,23 @@ const setupShopContractForTesting = async () => {
 	const couponAddress = await ShopContract.getCouponContractAddress();
 	const CouponContract = await hre.ethers.getContractAt('Coupon', couponAddress);
 
-	// Arrange for minting coupon
-	await ShopContract["buyProduct(uint256)"](0, { value: ethers.utils.parseUnits('1') });
+	const buyProducts = async (n) => {
+		for(i = 0; i < n; i++)
+			await ShopContract["buyProduct(uint256)"](0, { value: ethers.utils.parseUnits('1') });
+	}
 
-	// Approve minted coupon
+	// Arrange for minting coupon
+	await buyProducts(5);
+	
+	// Mint coupon
+	await ShopContract.mintCoupon();
+
+	// Approve minted coupon (needed when using coupon)
 	await CouponContract.approve(ShopContract.address, 1);
 
 	const ID_COUPON = 1;
 
-	return { ShopContract, CouponContract, owner, altAcc, ID_COUPON };
+	return { ShopContract, CouponContract, buyProducts, owner, altAcc, ID_COUPON };
 }
 
 const setupCouponContractForTesting = async () => {
