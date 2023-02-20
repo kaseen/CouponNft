@@ -70,11 +70,11 @@ contract ERC721A is IERC721A {
     // The bit mask of the `nextInitialized` bit in packed ownership.
     uint256 private constant _BITMASK_NEXT_INITIALIZED = 1 << 225;
 
-    // The bit position of the `soulbind` bit in packed ownership.
-    uint256 private constant _BITPOS_SOULBIND = 226;
+    // The bit position of the `soulbound` bit in packed ownership.
+    uint256 private constant _BITPOS_SOULBOUND = 226;
 
-    // The bit mask of the `soulbind` bit in packed ownership.
-    uint256 private constant _BITMASK_SOULBIND = 1 << 226;
+    // The bit mask of the `soulbound` bit in packed ownership.
+    uint256 private constant _BITMASK_SOULBOUND = 1 << 226;
 
     // The bit position of `percentage` in packed ownership.
     uint256 private constant _BITPOS_PERCENTAGE = 232;
@@ -121,9 +121,9 @@ contract ERC721A is IERC721A {
     // - [160..223]   `startTimestamp`
     // - [224]        `burned`
     // - [225]        `nextInitialized`
-	// - [226]        `soulbind`
+    // - [226]        `soulbound`
     // - [232..239]   `percentage`
-	// - [240..255]   `daysValid`
+    // - [240..255]   `daysValid`
     mapping(uint256 => uint256) private _packedOwnerships;
 
     // Mapping owner address to address data.
@@ -386,7 +386,7 @@ contract ERC721A is IERC721A {
         ownership.addr = address(uint160(packed));
         ownership.startTimestamp = uint64(packed >> _BITPOS_START_TIMESTAMP);
         ownership.burned = packed & _BITMASK_BURNED != 0;
-		ownership.soulbind = packed & _BITMASK_SOULBIND != 0;
+		ownership.soulbound = packed & _BITMASK_SOULBOUND != 0;
         ownership.percentage = uint8(packed >> _BITPOS_PERCENTAGE);
 		ownership.daysValid = uint16(packed >> _BITPOS_DAYS_VALID);
     }
@@ -403,7 +403,7 @@ contract ERC721A is IERC721A {
         }
     }
 
-	/**
+    /**
      * @dev Packs ownership data into a single uint256.
      */
     function _packTransferData(address owner, uint256 prevOwnershippacked) private pure returns (uint256 result) {
@@ -427,13 +427,13 @@ contract ERC721A is IERC721A {
         }
     }
 
-	/**
-     * @dev Returns the `soulbind` flag.
+    /**
+     * @dev Returns the `soulbound` flag.
      */
-    function _soulbindFlag(bool soulbind) private pure returns (uint256 result) {
+    function _soulboundFlag(bool soulbound) private pure returns (uint256 result) {
         assembly {
-            // `soulbind << _BITPOS_NEXT_INITIALIZED`.
-            result := shl(_BITPOS_SOULBIND, soulbind)
+            // `soulbound << _BITPOS_NEXT_INITIALIZED`.
+            result := shl(_BITPOS_SOULBOUND, soulbound)
         }
     }
 
@@ -579,8 +579,8 @@ contract ERC721A is IERC721A {
 
         if (address(uint160(prevOwnershipPacked)) != from) revert TransferFromIncorrectOwner();
 
-        // Revert if token is soulbind
-        if(prevOwnershipPacked & _BITMASK_SOULBIND != 0) revert TransferSoulbindToken();
+        // Revert if token is soulbound
+        if(prevOwnershipPacked & _BITMASK_SOULBOUND != 0) revert TransferSoulboundToken();
 
         (uint256 approvedAddressSlot, address approvedAddress) = _getApprovedSlotAndAddress(tokenId);
 
@@ -768,7 +768,7 @@ contract ERC721A is IERC721A {
     function _mint(
         address to,
         uint256 quantity,
-        bool soulbind,
+        bool soulbound,
         uint256 percentage,
         uint256 daysValid
     ) internal virtual {
@@ -802,7 +802,7 @@ contract ERC721A is IERC721A {
             _packedOwnerships[startTokenId] = _packOwnershipData(
                 to,
                 _nextInitializedFlag(quantity) |
-                _soulbindFlag(soulbind) |
+                _soulboundFlag(soulbound) |
                 percentage << _BITPOS_PERCENTAGE |
                 daysValid << _BITPOS_DAYS_VALID
             );
@@ -862,12 +862,12 @@ contract ERC721A is IERC721A {
     function _safeMint(
         address to,
         uint256 quantity,
-        bool soulbind,
+        bool soulbound,
         uint256 percentage,
         uint256 daysValid,
         bytes memory _data
     ) internal virtual {
-        _mint(to, quantity, soulbind, percentage, daysValid);
+        _mint(to, quantity, soulbound, percentage, daysValid);
 
         unchecked {
             if (to.code.length != 0) {
@@ -885,10 +885,10 @@ contract ERC721A is IERC721A {
     }
 
     /**
-     * @dev Equivalent to `_safeMint(to, quantity, soulbind, percentage, daysValid, '')`.
+     * @dev Equivalent to `_safeMint(to, quantity, soulbound, percentage, daysValid, '')`.
      */
-    function _safeMint(address to, uint256 quantity, bool soulbind, uint256 percentage, uint256 daysValid) internal virtual {
-        _safeMint(to, quantity, soulbind, percentage, daysValid, '');
+    function _safeMint(address to, uint256 quantity, bool soulbound, uint256 percentage, uint256 daysValid) internal virtual {
+        _safeMint(to, quantity, soulbound, percentage, daysValid, '');
     }
 
     // =============================================================

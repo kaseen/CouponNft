@@ -23,10 +23,10 @@ interface ICoupon {
 	 */
 	error NotAuthorized();
 
-	function mintSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external returns(uint256);
-	function mintNonSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external returns(uint256);
-	function safeMintSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external returns(uint256);
-	function safeMintNonSoulbind(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external returns(uint256);
+	function mintSoulbound(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external returns(uint256);
+	function mintNonSoulbound(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external returns(uint256);
+	function safeMintSoulbound(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external returns(uint256);
+	function safeMintNonSoulbound(address to, uint256 quantity, uint256 percentage, uint256 daysValid) external returns(uint256);
 	function useCoupon(uint256 tokenId) external;
 	function getCouponDiscount(uint256 tokenId) external view returns(uint256);
 	function exists(uint256 tokenId) external view returns(bool);

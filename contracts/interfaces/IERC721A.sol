@@ -75,7 +75,7 @@ interface IERC721A {
 	error OwnershipNotInitializedForExtraData();
 
 	// TODO: comment
-	error TransferSoulbindToken();
+	error TransferSoulboundToken();
 	error MintInvalidPercentage();
 	error MintInvalidDays();
 	
@@ -92,8 +92,8 @@ interface IERC721A {
 		uint64 startTimestamp;
 		// Whether the token has been burned.
 		bool burned;
-		// Whather the token is soulbind
-		bool soulbind;
+		// Whather the token is soulbound
+		bool soulbound;
 
 		uint8 percentage;
 		uint16 daysValid;

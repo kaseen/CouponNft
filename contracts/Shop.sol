@@ -62,7 +62,7 @@ contract Shop is Ownable, IShop {
 
 		// Mint new coupon if user exceeds threshold
 		if(spentBalances[msg.sender] >= _MINT_THRESHOLD){
-			uint256 mintedId = couponContract.mintSoulbind(msg.sender, _QUANTITY_MINTED, _COUPON_DISCOUNT, _DAYS_VALID);
+			uint256 mintedId = couponContract.mintSoulbound(msg.sender, _QUANTITY_MINTED, _COUPON_DISCOUNT, _DAYS_VALID);
 			spentBalances[msg.sender] = 0;
 			emit CouponMinted(msg.sender, mintedId);
 		}

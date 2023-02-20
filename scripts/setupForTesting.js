@@ -36,11 +36,11 @@ const setupCouponContractForTesting = async () => {
 	const NonERC721ReceiverContract = await NonERC721Receiver.deploy();
 	await NonERC721ReceiverContract.deployed();
 
-	await CouponContract.mintSoulbind(altAcc.address, 1, 10, 100);
-	await CouponContract.mintNonSoulbind(altAcc.address, 1, 10, 100);
+	await CouponContract.mintSoulbound(altAcc.address, 1, 10, 100);
+	await CouponContract.mintNonSoulbound(altAcc.address, 1, 10, 100);
 
-	const ID_SOULDBIND = 1;
-	const ID_NONSOULBIND = 2;
+	const ID_SOULBOUND = 1;
+	const ID_NONSOULBOUND = 2;
 	const nextTokenId = Number(await CouponContract.totalSupply()) + 1;
 
 	return { 
@@ -49,8 +49,8 @@ const setupCouponContractForTesting = async () => {
 		NonERC721ReceiverContract,
 		owner,
 		altAcc, 
-		ID_SOULDBIND,
-		ID_NONSOULBIND,
+		ID_SOULBOUND,
+		ID_NONSOULBOUND,
 		nextTokenId
 	};
 }
