@@ -16,7 +16,7 @@ contract Shop is Ownable, IShop {
 	constructor(string memory name, string memory symbol, string memory uri){
 		couponContract = new Coupon(name, symbol, uri);
 		products.push(Product({ name: 'test', value: 0.1 ether, couponUsable: false }));
-		products.push(Product({ name: 'test1', value: 0.25 ether, couponUsable: true }));
+		products.push(Product({ name: 'test1', value: 1 ether, couponUsable: true }));
 		products.push(Product({ name: 'test2', value: 0.4 ether, couponUsable: false }));
 	}
 
@@ -26,20 +26,12 @@ contract Shop is Ownable, IShop {
 
 	function buyProduct(uint256 productId, uint256 couponId) public payable{
 		if(products.length < productId) revert OutOfRange();
-		// TODO: Missing msg.value with discount
-		if(msg.value < products[productId].value) revert NotEnoughFunds();
 
+		// If coupon is burned reverts with _packedOwnershipOf -> OwnerQueryForNonexistentToken
 		uint256 couponPercentage = couponContract.getCouponDiscount(couponId);
-		
-		// Return change (if exists)
 		uint256 productValue = products[productId].value;
-		uint256 change = msg.value - productValue;
 
-		if(change > 0){
-			payable(msg.sender).transfer(change);
-		}
-
-		// Reduce product value based on coupon percentage.
+		// Use coupon and calculate productValue 
 		if(couponPercentage != 0){
 			// Revert if product price is not reducible
 			if(!products[productId].couponUsable) revert ProductPriceNotReducible();
@@ -47,9 +39,19 @@ contract Shop is Ownable, IShop {
 			// Burn coupon (also checks if couponId is valid) 
 			couponContract.useCoupon(couponId);
 
-			productValue = (productValue / 100) * couponPercentage;
+			productValue = (productValue * (100 - couponPercentage)) / 100;
 			emit CouponUsed(msg.sender, couponId);
 		}
+
+		// Check if user have enough funds
+		if(msg.value < productValue) revert NotEnoughFunds();
+		
+		// Return change (if exists)
+		uint256 change = msg.value - productValue;
+		if(change > 0){
+			payable(msg.sender).transfer(change);
+		}
+
 		// Increment msg.sender loyalty 
 		loyaltyProgram[msg.sender]++;
 	}

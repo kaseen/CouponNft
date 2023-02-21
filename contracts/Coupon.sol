@@ -32,10 +32,8 @@ contract Coupon is Ownable, ERC721A, ICoupon {
 	}
 
 	function useCoupon(uint256 tokenId) external onlyOwner {
-		TokenOwnership memory unpackedOwnership = _ownershipOf(tokenId);
-
-		// Check if tokenId is valid or coupon is already burned.
-		if(!_exists(tokenId)) revert QueryForNonexistentToken();		
+		// If coupon is burned reverts with _ownershipOf -> OwnerQueryForNonexistentToken
+		TokenOwnership memory unpackedOwnership = _ownershipOf(tokenId);		
 
 		// Check if coupon expired.
 		if(unpackedOwnership.startTimestamp + unpackedOwnership.daysValid * _SECONDS_IN_ONE_DAY < block.timestamp)

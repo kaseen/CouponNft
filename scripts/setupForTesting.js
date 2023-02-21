@@ -11,7 +11,7 @@ const setupShopContractForTesting = async () => {
 
 	const buyProducts = async (n) => {
 		for(i = 0; i < n; i++)
-			await ShopContract["buyProduct(uint256)"](0, { value: ethers.utils.parseUnits('1') });
+			await ShopContract["buyProduct(uint256)"](0, { value: ethers.utils.parseUnits('0.1') });
 	}
 
 	// Arrange for minting coupon
