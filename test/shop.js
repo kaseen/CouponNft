@@ -15,14 +15,33 @@ describe('Contract: Shop.sol', () => {
 			.to.be.equal(true);
 	});
 
-	it('Should emit 2xTransfer', async () => {
-		const { ShopContract, CouponContract, buyProducts, owner } = await loadFixture(setupShopContractForTesting);
+	describe('Should mint according to description', async () => {
 
-		await buyProducts(5);
-		await expect(ShopContract.mintCoupon())
-			.to.emit(CouponContract, 'Transfer').withArgs(ethers.constants.AddressZero, owner.address, 2)
-			.to.emit(CouponContract, 'Transfer').withArgs(ethers.constants.AddressZero, owner.address, 3);
-	});
+		let Setup;
+
+		beforeEach(async () => {
+			Setup = await loadFixture(setupShopContractForTesting);
+			await Setup.buyProducts(40);
+		})
+
+		it('Mint reward for 50th milestone', async () => {	
+			await expect(Setup.ShopContract.mintCoupon())
+				.to.emit(Setup.CouponContract, 'Transfer').withArgs(ethers.constants.AddressZero, Setup.owner.address, 2)
+				.to.emit(Setup.CouponContract, 'Transfer').withArgs(ethers.constants.AddressZero, Setup.owner.address, 3);
+		})
+
+		it('Mint every 100th', async () => {
+			await Setup.buyProducts(50);
+			await expect(Setup.ShopContract.mintCoupon())
+				.to.emit(Setup.CouponContract, 'Transfer').withArgs(ethers.constants.AddressZero, Setup.owner.address, 4);
+			await Setup.buyProducts(100);
+			await expect(Setup.ShopContract.mintCoupon())
+				.to.emit(Setup.CouponContract, 'Transfer').withArgs(ethers.constants.AddressZero, Setup.owner.address, 9);
+			await Setup.buyProducts(100);
+			await expect(Setup.ShopContract.mintCoupon())
+				.to.emit(Setup.CouponContract, 'Transfer').withArgs(ethers.constants.AddressZero, Setup.owner.address, 14);
+		})
+	})
 
 	it('Should use Coupon', async () => {
 		const { ShopContract, CouponContract, owner, ID_COUPON } = await loadFixture(setupShopContractForTesting); 

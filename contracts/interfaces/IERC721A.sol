@@ -74,11 +74,20 @@ interface IERC721A {
 	*/
 	error OwnershipNotInitializedForExtraData();
 
-	// TODO: comment
+	/**
+	 * Cannot transfer soulbound token.
+	 */
 	error TransferSoulboundToken();
+
+	/**
+	 * The `percentage` is bigger than 100.
+	 */
 	error MintInvalidPercentage();
+
+	/**
+	 * The `daysValid` is bigger than 2**16 - 1.
+	 */
 	error MintInvalidDays();
-	
 
 
 	// =============================================================
@@ -92,10 +101,11 @@ interface IERC721A {
 		uint64 startTimestamp;
 		// Whether the token has been burned.
 		bool burned;
-		// Whather the token is soulbound
+		// Whather the token is soulbound.
 		bool soulbound;
-
+		// Number representing the discount of token.
 		uint8 percentage;
+		// Number of days until token expire.
 		uint16 daysValid;
 	}
 

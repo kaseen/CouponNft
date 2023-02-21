@@ -15,7 +15,7 @@ const setupShopContractForTesting = async () => {
 	}
 
 	// Arrange for minting coupon
-	await buyProducts(5);
+	await buyProducts(10);
 	
 	// Mint coupon
 	await ShopContract.mintCoupon();

@@ -15,9 +15,9 @@ contract Shop is Ownable, IShop {
 
 	constructor(string memory name, string memory symbol, string memory uri){
 		couponContract = new Coupon(name, symbol, uri);
-		products.push(Product({ name: 'test', value: 0.1 ether, couponUsable: false }));
-		products.push(Product({ name: 'test1', value: 1 ether, couponUsable: true }));
-		products.push(Product({ name: 'test2', value: 0.4 ether, couponUsable: false }));
+		products.push(Product({ name: 'PRODUCT_1', value: 0.1 ether, couponUsable: false }));
+		products.push(Product({ name: 'PRODUCT_2', value: 1 ether, couponUsable: true }));
+		products.push(Product({ name: 'PRODUCT_3', value: 0.4 ether, couponUsable: false }));
 	}
 
 	function buyProduct(uint256 productId) public payable{
@@ -58,12 +58,15 @@ contract Shop is Ownable, IShop {
 
 	function mintCoupon() public{
 		uint256 numOfPurchasedProducts = getNumOfPurchasedProducts();
-		if(numOfPurchasedProducts == 5){
+
+		if(numOfPurchasedProducts == 10)
 			couponContract.mintSoulbound(msg.sender, 1, 10, 30);
-		}else if(numOfPurchasedProducts == 10){
-			couponContract.mintSoulbound(msg.sender, 2, 10, 30);
-		}else{
-			return;
+		else if(numOfPurchasedProducts == 50)
+			couponContract.mintSoulbound(msg.sender, 2, 15, 30);
+		else{
+			bool canMint = (numOfPurchasedProducts % 100) == 0;
+			if(canMint)
+				couponContract.mintSoulbound(msg.sender, 5, 20, 30);
 		}
 	}
 

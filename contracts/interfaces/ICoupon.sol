@@ -4,17 +4,17 @@ pragma solidity 0.8.17;
 interface ICoupon {
 
 	/**
-	 * Coupon is not approved by owner.
+	 * Emitted when coupon is not approved by owner.
 	 */
 	error NotApproved();
 
 	/**
-	 * Coupon expired.
+	 * Emitted when coupon is expired.
 	 */
 	error CouponExpired();
 
 	/**
-	 * Caller not authorized.
+	 * Emitted when caller not authorized.
 	 */
 	error NotAuthorized();
 

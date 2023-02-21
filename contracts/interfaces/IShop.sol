@@ -20,11 +20,6 @@ interface IShop {
 	event CouponMinted(address user, uint256 couponId);
 
 	/**
-	 * Token ID is invalid.
-	 */
-	error QueryForNonexistentToken();
-
-	/**
 	 * Product ID is invalid.
 	 */
 	error OutOfRange();
@@ -39,8 +34,4 @@ interface IShop {
 	 */
 	error ProductPriceNotReducible();
 
-	/**
-	 * Function parameter is invalid.
-	 */
-	error InvalidParameter();
 }
