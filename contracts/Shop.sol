@@ -66,7 +66,7 @@ contract Shop is Ownable, IShop {
 		else{
 			bool canMint = (numOfPurchasedProducts % 100) == 0;
 			if(canMint)
-				couponContract.mintSoulbound(msg.sender, 5, 20, 30);
+				couponContract.mintSoulbound(msg.sender, 5, 20, 45);
 		}
 	}
 

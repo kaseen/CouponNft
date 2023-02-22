@@ -776,10 +776,10 @@ contract ERC721A is IERC721A {
         if (quantity == 0) revert MintZeroQuantity();
 
         // Revert if percentage > 100
-        if(percentage > 100) revert MintInvalidPercentage();
+        if(percentage > 100 || percentage == 0) revert MintInvalidPercentage();
 
         // Revert if daysValid > 2**16 - 1
-        if(daysValid > 65535) revert MintInvalidDays();
+        if(daysValid > 65535 || daysValid == 0) revert MintInvalidDays();
 
         _beforeTokenTransfers(address(0), to, startTokenId, quantity);
 

@@ -1,4 +1,4 @@
-const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
+const { loadFixture, time } = require('@nomicfoundation/hardhat-network-helpers');
 const { setupCouponContractForTesting } = require('../scripts/setupForTesting');
 const { expect } = require('chai');
 
@@ -39,9 +39,11 @@ describe('Contract: Coupon.sol', () => {
 		it('Should revert CouponExpired', async () => {
 			const { CouponContract, owner, nextTokenId } = await loadFixture(setupCouponContractForTesting);
 
-			await CouponContract.mintSoulbound(owner.address, 1, 10, 0);
-			// Wait 1 second
-			await new Promise(resolve => setTimeout(resolve, Number(1)*1000));
+			await CouponContract.mintSoulbound(owner.address, 1, 10, 1);
+			await CouponContract.approve(owner.address, nextTokenId);
+
+			// Increase time by 24h and mine a new block so coupon can expire
+			await time.increase(3600 * 24);
 
 			await expect(CouponContract.connect(owner).useCoupon(nextTokenId))
 				.to.be.revertedWithCustomError(CouponContract, 'CouponExpired');

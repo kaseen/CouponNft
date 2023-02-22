@@ -31,13 +31,10 @@ contract Coupon is Ownable, ERC721A, ICoupon {
 		_safeMint(to, quantity, false, percentage, daysValid);
 	}
 
-	function useCoupon(uint256 tokenId) external onlyOwner {
+	function useCoupon(uint256 tokenId) external onlyOwner{
 		// If coupon is burned reverts with _ownershipOf -> OwnerQueryForNonexistentToken
-		TokenOwnership memory unpackedOwnership = _ownershipOf(tokenId);		
-
-		// Check if coupon expired.
-		if(unpackedOwnership.startTimestamp + unpackedOwnership.daysValid * _SECONDS_IN_ONE_DAY < block.timestamp)
-			revert CouponExpired();
+		if(getCouponExirationDate(tokenId) < block.timestamp)
+			revert CouponExpired();	// Checks if coupon expired.
 
 		// Check if coupon is approved by its owner.
 		if(msg.sender != getApproved(tokenId)) revert NotApproved();
@@ -45,8 +42,13 @@ contract Coupon is Ownable, ERC721A, ICoupon {
 		_burn(tokenId);
 	}
 
-	function getCouponDiscount(uint256 tokenId) external view returns(uint256) {
+	function getCouponDiscount(uint256 tokenId) external view returns(uint256){
 		return tokenId != 0 ? _ownershipOf(tokenId).percentage : 0;
+	}
+
+	function getCouponExirationDate(uint256 tokenId) public view returns(uint256){
+		TokenOwnership memory unpackedOwnership = _ownershipOf(tokenId);
+		return unpackedOwnership.startTimestamp + unpackedOwnership.daysValid * _SECONDS_IN_ONE_DAY;
 	}
 
 	function exists(uint256 tokenId) external view returns(bool){
