@@ -85,12 +85,6 @@ contract ERC721A is IERC721A {
     // The mask of the lower 160 bits for addresses.
     uint256 private constant _BITMASK_ADDRESS = (1 << 160) - 1;
 
-    // The maximum `quantity` that can be minted with {_mintERC2309}.
-    // This limit is to prevent overflows on the address data entries.
-    // For a limit of 5000, a total of 3.689e15 calls to {_mintERC2309}
-    // is required to cause an overflow, which is unrealistic.
-    uint256 private constant _MAX_MINT_ERC2309_QUANTITY_LIMIT = 5000;
-
     // The `Transfer` event signature is given by:
     // `keccak256(bytes("Transfer(address,address,uint256)"))`.
     bytes32 private constant _TRANSFER_EVENT_SIGNATURE =
