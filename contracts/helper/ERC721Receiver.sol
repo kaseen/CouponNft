@@ -9,9 +9,9 @@ contract ERC721Receiver {
         uint256 tokenId,
         bytes calldata data
     ) external pure returns (bytes4){
-		// Silence compiler warnings 
-		operator; from; tokenId; data;
-		
-		return this.onERC721Received.selector;
-	}
+        // Silence compiler warnings 
+        operator; from; tokenId; data;
+
+        return this.onERC721Received.selector;
+    }
 }
