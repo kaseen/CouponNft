@@ -1,5 +1,4 @@
-artifacts/
 cache/
-node_modules/
+lib/
+out/
 .env
-gasReport.txt

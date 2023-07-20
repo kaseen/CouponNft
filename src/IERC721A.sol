@@ -8,6 +8,28 @@ pragma solidity ^0.8.4;
 * @dev Interface of ERC721A.
 */
 interface IERC721A {
+
+    // =============================================================
+    //                            STRUCTS
+    // =============================================================
+
+    struct TokenOwnership {
+        // The address of the owner.
+        address addr;
+        // Stores the start time of ownership with minimal overhead for tokenomics.
+        uint64 startTimestamp;
+        // Whether the token has been burned.
+        bool burned;
+        // Whather the token is soulbound.
+        bool soulbound;
+        // 
+        uint8 couponType;
+        // Number representing the discount of token.
+        uint8 percentage;
+        // Number of days until token expire.
+        uint16 daysValid;
+    }
+
     /**
     * The caller must own the token or be an approved operator.
     */
@@ -88,26 +110,6 @@ interface IERC721A {
      * The `daysValid` is bigger than 2**16 - 1.
      */
     error MintInvalidDays();
-
-
-    // =============================================================
-    //                            STRUCTS
-    // =============================================================
-
-    struct TokenOwnership {
-        // The address of the owner.
-        address addr;
-        // Stores the start time of ownership with minimal overhead for tokenomics.
-        uint64 startTimestamp;
-        // Whether the token has been burned.
-        bool burned;
-        // Whather the token is soulbound.
-        bool soulbound;
-        // Number representing the discount of token.
-        uint8 percentage;
-        // Number of days until token expire.
-        uint16 daysValid;
-    }
 
     // =============================================================
     //                         TOKEN COUNTERS

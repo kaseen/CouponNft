@@ -4,7 +4,7 @@
 
 pragma solidity ^0.8.4;
 
-import './interfaces/IERC721A.sol';
+import './IERC721A.sol';
 
 /**
  * @dev Interface of ERC721 token receiver.
@@ -75,6 +75,9 @@ contract ERC721A is IERC721A {
 
     // The bit mask of the `soulbound` bit in packed ownership.
     uint256 private constant _BITMASK_SOULBOUND = 1 << 226;
+
+    // The bit position of the `type` bit in packed ownership
+    uint256 private constant _BITPOS_TYPE = 227;
 
     // The bit position of `percentage` in packed ownership.
     uint256 private constant _BITPOS_PERCENTAGE = 232;
@@ -381,6 +384,7 @@ contract ERC721A is IERC721A {
         ownership.startTimestamp = uint64(packed >> _BITPOS_START_TIMESTAMP);
         ownership.burned = packed & _BITMASK_BURNED != 0;
 		ownership.soulbound = packed & _BITMASK_SOULBOUND != 0;
+        ownership.couponType = uint8((packed >> _BITPOS_TYPE) & 1);
         ownership.percentage = uint8(packed >> _BITPOS_PERCENTAGE);
 		ownership.daysValid = uint16(packed >> _BITPOS_DAYS_VALID);
     }
@@ -388,19 +392,19 @@ contract ERC721A is IERC721A {
     /**
      * @dev Packs ownership data into a single uint256.
      */
-    function _packOwnershipData(address owner, uint256 flags) private view returns (uint256 result) {
+    /* TODO function _packOwnershipData(address owner, uint256 flags) private view returns (uint256 result) {
         assembly {
             // Mask `owner` to the lower 160 bits, in case the upper bits somehow aren't clean.
             owner := and(owner, _BITMASK_ADDRESS)
             // `owner | (block.timestamp << _BITPOS_START_TIMESTAMP) | flags`.
             result := or(owner, or(shl(_BITPOS_START_TIMESTAMP, timestamp()), flags))
         }
-    }
+    }*/
 
     /**
      * @dev Packs ownership data into a single uint256.
      */
-    function _packTransferData(address owner, uint256 prevOwnershippacked) private pure returns (uint256 result) {
+    /* TODO function _packTransferData(address owner, uint256 prevOwnershippacked) private pure returns (uint256 result) {
         uint96 _previousData = uint96(prevOwnershippacked >> _BITPOS_START_TIMESTAMP);
         assembly {
             // Mask `owner` to the lower 160 bits, in case the upper bits somehow aren't clean.
@@ -408,7 +412,7 @@ contract ERC721A is IERC721A {
             // `owner | (_previousData << _BITPOS_START_TIMESTAMP)`.
             result := or(owner, shl(_BITPOS_START_TIMESTAMP, _previousData))
         }
-    }
+    }*/
 
     /**
      * @dev Returns the `nextInitialized` flag set if `quantity` equals 1.
@@ -609,7 +613,7 @@ contract ERC721A is IERC721A {
             // - `percentage` to percentage field of tokenId.
             // - `daysValid` to daysValid field of tokenId.
             // - `nextInitialized` to `true`.
-            _packedOwnerships[tokenId] = _packTransferData(to, prevOwnershipPacked) | _BITMASK_NEXT_INITIALIZED;
+            // TODO: _packedOwnerships[tokenId] = _packTransferData(to, prevOwnershipPacked) | _BITMASK_NEXT_INITIALIZED;
 
             // If the next slot may not have been initialized (i.e. `nextInitialized == false`) .
             if (prevOwnershipPacked & _BITMASK_NEXT_INITIALIZED == 0) {
@@ -766,7 +770,6 @@ contract ERC721A is IERC721A {
         uint256 percentage,
         uint256 daysValid
     ) internal virtual {
-        uint256 startTokenId = _currentIndex;
         if (quantity == 0) revert MintZeroQuantity();
 
         // Revert if percentage > 100
@@ -775,6 +778,66 @@ contract ERC721A is IERC721A {
         // Revert if daysValid > 2**16 - 1
         if(daysValid > 65535 || daysValid == 0) revert MintInvalidDays();
 
+        if(quantity == 1)
+            mintSingle(to, soulbound, percentage, daysValid); 
+        else
+            mintMultiple(to, quantity, soulbound, percentage, daysValid);
+    }
+
+    function mintSingle(
+        address to,
+        bool soulbound,
+        uint256 percentage,
+        uint256 daysValid
+    ) private {
+        uint256 startTokenId = _currentIndex;
+
+        _beforeTokenTransfers(address(0), to, startTokenId, 1);
+
+        unchecked {
+            uint256 result;
+
+            assembly {
+                result := and(to, _BITMASK_ADDRESS)
+                result := or(result, shl(_BITPOS_START_TIMESTAMP, timestamp()))
+                // set burned to 0
+                result := or(result, shl(_BITPOS_NEXT_INITIALIZED, 1))  // set nextInitialized to 1
+                result := or(result, shl(_BITPOS_SOULBOUND, soulbound))
+                result := or(result, shl(_BITPOS_TYPE, 1))              // set type 1
+                result := or(result, shl(_BITPOS_PERCENTAGE, percentage))
+                result := or(result, shl(_BITPOS_DAYS_VALID, daysValid))
+            }
+
+            _packedOwnerships[startTokenId] = result;
+
+            // Updates:
+            // - `balance += quantity`.
+            // - `numberMinted += quantity`.
+            _packedAddressData[to] += (1 << _BITPOS_NUMBER_MINTED) | 1;
+
+            uint256 toMasked = uint256(uint160(to)) & _BITMASK_ADDRESS;
+
+            if(toMasked == 0) revert MintToZeroAddress();
+
+            assembly {
+                log4(0, 0, _TRANSFER_EVENT_SIGNATURE, 0, toMasked, startTokenId)
+            }
+
+            _currentIndex++;
+        }
+
+        _afterTokenTransfers(address(0), to, startTokenId, 1);
+    }
+
+    function mintMultiple(
+        address to,
+        uint256 quantity,
+        bool soulbound,
+        uint256 percentage,
+        uint256 daysValid
+    ) private {
+        uint256 startTokenId = _currentIndex;
+
         _beforeTokenTransfers(address(0), to, startTokenId, quantity);
 
         // Overflows are incredibly unrealistic.
@@ -782,58 +845,56 @@ contract ERC721A is IERC721A {
         // `tokenId` has a maximum limit of 2**256.
         unchecked {
             // Updates:
+            // - `address` to the owner.
+            // - `startTimestamp` to the timestamp of minting.
+            // - `burned` to `false`.
+            // - `nextInitialized` to `quantity == 1`.
+
+            uint256 result;
+
+            assembly {
+                result := and(to, _BITMASK_ADDRESS)
+                result := or(result, shl(_BITPOS_START_TIMESTAMP, timestamp()))
+                // set burned to 0
+                result := or(result, shl(_BITPOS_NEXT_INITIALIZED, 0)) // set nextInitialized to 0
+                result := or(result, shl(_BITPOS_SOULBOUND, soulbound))
+                // set type to 0
+                result := or(result, shl(_BITPOS_PERCENTAGE, percentage))
+                result := or(result, shl(_BITPOS_DAYS_VALID, daysValid))
+            }
+
+            _packedOwnerships[startTokenId] = result;
+
+            // Updates:
             // - `balance += quantity`.
             // - `numberMinted += quantity`.
             //
             // We can directly add to the `balance` and `numberMinted`.
             _packedAddressData[to] += quantity * ((1 << _BITPOS_NUMBER_MINTED) | 1);
 
-            // Updates:
-            // - `address` to the owner.
-            // - `startTimestamp` to the timestamp of minting.
-            // - `burned` to `false`.
-            // - `nextInitialized` to `quantity == 1`.
-            _packedOwnerships[startTokenId] = _packOwnershipData(
-                to,
-                _nextInitializedFlag(quantity) |
-                _soulboundFlag(soulbound) |
-                percentage << _BITPOS_PERCENTAGE |
-                daysValid << _BITPOS_DAYS_VALID
-            );
+            // Mask `to` to the lower 160 bits, in case the upper bits somehow aren't clean.
+            uint256 toMasked = uint256(uint160(to)) & _BITMASK_ADDRESS;
 
-            uint256 toMasked;
-            uint256 end = startTokenId + quantity;
-
-            // Use assembly to loop and emit the `Transfer` event for gas savings.
-            // The duplicated `log4` removes an extra check and reduces stack juggling.
-            // The assembly, together with the surrounding Solidity code, have been
-            // delicately arranged to nudge the compiler into producing optimized opcodes.
-            assembly {
-                // Mask `to` to the lower 160 bits, in case the upper bits somehow aren't clean.
-                toMasked := and(to, _BITMASK_ADDRESS)
-                // Emit the `Transfer` event.
-                log4(
-                    0, // Start of data (0, since no data).
-                    0, // End of data (0, since no data).
-                    _TRANSFER_EVENT_SIGNATURE, // Signature.
-                    0, // `address(0)`.
-                    toMasked, // `to`.
-                    startTokenId // `tokenId`.
-                )
-
-                // The `iszero(eq(,))` check ensures that large values of `quantity`
-                // that overflows uint256 will make the loop run out of gas.
-                // The compiler will optimize the `iszero` away for performance.
-                for {
-                    let tokenId := add(startTokenId, 1)
-                } iszero(eq(tokenId, end)) {
-                    tokenId := add(tokenId, 1)
-                } {
-                    // Emit the `Transfer` event. Similar to above.
-                    log4(0, 0, _TRANSFER_EVENT_SIGNATURE, 0, toMasked, tokenId)
-                }
-            }
             if (toMasked == 0) revert MintToZeroAddress();
+
+            uint256 end = startTokenId + quantity;
+            uint256 tokenId = startTokenId;
+
+            do {
+                assembly {
+                    // Emit the `Transfer` event.
+                    log4(
+                        0, // Start of data (0, since no data).
+                        0, // End of data (0, since no data).
+                        _TRANSFER_EVENT_SIGNATURE, // Signature.
+                        0, // `address(0)`.
+                        toMasked, // `to`.
+                        tokenId // `tokenId`.                
+                    )
+                }
+                // The `!=` check ensures that large values of `quantity`
+                // that overflows uint256 will make the loop run out of gas.
+            } while (++tokenId != end);
 
             _currentIndex = end;
         }
@@ -949,10 +1010,11 @@ contract ERC721A is IERC721A {
             // - `daysValid` to daysValid field of tokenId.
             // - `burned` to `true`.
             // - `nextInitialized` to `true`.
-            _packedOwnerships[tokenId] = _packOwnershipData(
+            // TODO
+            /*_packedOwnerships[tokenId] = _packOwnershipData(
                 from, 
                 (_BITMASK_BURNED | _BITMASK_NEXT_INITIALIZED) |  prevOwnershipPacked
-            );
+            );*/
 
             // If the next slot may not have been initialized (i.e. `nextInitialized == false`) .
             if (prevOwnershipPacked & _BITMASK_NEXT_INITIALIZED == 0) {
