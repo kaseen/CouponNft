@@ -6,6 +6,8 @@ pragma solidity ^0.8.4;
 
 import './IERC721A.sol';
 
+import 'forge-std/console.sol';
+
 /**
  * @dev Interface of ERC721 token receiver.
  */
@@ -383,10 +385,10 @@ contract ERC721A is IERC721A {
         ownership.addr = address(uint160(packed));
         ownership.startTimestamp = uint64(packed >> _BITPOS_START_TIMESTAMP);
         ownership.burned = packed & _BITMASK_BURNED != 0;
-		ownership.soulbound = packed & _BITMASK_SOULBOUND != 0;
+        ownership.soulbound = packed & _BITMASK_SOULBOUND != 0;
         ownership.couponType = uint8((packed >> _BITPOS_TYPE) & 1);
         ownership.percentage = uint8(packed >> _BITPOS_PERCENTAGE);
-		ownership.daysValid = uint16(packed >> _BITPOS_DAYS_VALID);
+        ownership.daysValid = uint16(packed >> _BITPOS_DAYS_VALID);
     }
 
     /**
@@ -404,7 +406,7 @@ contract ERC721A is IERC721A {
     /**
      * @dev Packs ownership data into a single uint256.
      */
-    /* TODO function _packTransferData(address owner, uint256 prevOwnershippacked) private pure returns (uint256 result) {
+    function _packTransferData(address owner, uint256 prevOwnershippacked) private pure returns (uint256 result) {
         uint96 _previousData = uint96(prevOwnershippacked >> _BITPOS_START_TIMESTAMP);
         assembly {
             // Mask `owner` to the lower 160 bits, in case the upper bits somehow aren't clean.
@@ -412,28 +414,28 @@ contract ERC721A is IERC721A {
             // `owner | (_previousData << _BITPOS_START_TIMESTAMP)`.
             result := or(owner, shl(_BITPOS_START_TIMESTAMP, _previousData))
         }
-    }*/
+    }
 
     /**
      * @dev Returns the `nextInitialized` flag set if `quantity` equals 1.
      */
-    function _nextInitializedFlag(uint256 quantity) private pure returns (uint256 result) {
+    /* TODO function _nextInitializedFlag(uint256 quantity) private pure returns (uint256 result) {
         // For branchless setting of the `nextInitialized` flag.
         assembly {
             // `(quantity == 1) << _BITPOS_NEXT_INITIALIZED`.
             result := shl(_BITPOS_NEXT_INITIALIZED, eq(quantity, 1))
         }
-    }
+    }*/
 
     /**
      * @dev Returns the `soulbound` flag.
      */
-    function _soulboundFlag(bool soulbound) private pure returns (uint256 result) {
+    /* TODO function _soulboundFlag(bool soulbound) private pure returns (uint256 result) {
         assembly {
             // `soulbound << _BITPOS_NEXT_INITIALIZED`.
             result := shl(_BITPOS_SOULBOUND, soulbound)
         }
-    }
+    } */
 
     // =============================================================
     //                      APPROVAL OPERATIONS
@@ -555,6 +557,32 @@ contract ERC721A is IERC721A {
     //                      TRANSFER OPERATIONS
     // =============================================================
 
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public payable virtual override {
+        bool couponType = getCouponType(tokenId);
+        console.log('COUPON TYPE %s', couponType);
+
+        if(couponType){
+            console.log('USO SINGLE');
+            transferFromSingle(from, to, tokenId);
+        }
+        else{
+            console.log('USO MULTIPLE');
+            transferFromMultiple(from, to, tokenId);
+        }
+    }
+
+    function transferFromSingle(
+        address from,
+        address to,
+        uint256 tokenId
+    ) private {
+
+    }
+
     /**
      * @dev Transfers `tokenId` from `from` to `to`.
      *
@@ -568,12 +596,15 @@ contract ERC721A is IERC721A {
      *
      * Emits a {Transfer} event.
      */
-    function transferFrom(
+    function transferFromMultiple(
         address from,
         address to,
         uint256 tokenId
-    ) public payable virtual override {
+    ) private {
         uint256 prevOwnershipPacked = _packedOwnershipOf(tokenId);
+
+        // Mask `from` to the lower 160 bits, in case the upper bits somehow aren't clean.
+        from = address(uint160(uint256(uint160(from)) & _BITMASK_ADDRESS));
 
         if (address(uint160(prevOwnershipPacked)) != from) revert TransferFromIncorrectOwner();
 
@@ -585,8 +616,6 @@ contract ERC721A is IERC721A {
         // The nested ifs save around 20+ gas over a compound boolean condition.
         if (!_isSenderApprovedOrOwner(approvedAddress, from, _msgSenderERC721A()))
             if (!isApprovedForAll(from, _msgSenderERC721A())) revert TransferCallerNotOwnerNorApproved();
-
-        if (to == address(0)) revert TransferToZeroAddress();
 
         _beforeTokenTransfers(from, to, tokenId, 1);
 
@@ -613,7 +642,7 @@ contract ERC721A is IERC721A {
             // - `percentage` to percentage field of tokenId.
             // - `daysValid` to daysValid field of tokenId.
             // - `nextInitialized` to `true`.
-            // TODO: _packedOwnerships[tokenId] = _packTransferData(to, prevOwnershipPacked) | _BITMASK_NEXT_INITIALIZED;
+            _packedOwnerships[tokenId] = _packTransferData(to, prevOwnershipPacked) | _BITMASK_NEXT_INITIALIZED;
 
             // If the next slot may not have been initialized (i.e. `nextInitialized == false`) .
             if (prevOwnershipPacked & _BITMASK_NEXT_INITIALIZED == 0) {
@@ -629,7 +658,21 @@ contract ERC721A is IERC721A {
             }
         }
 
-        emit Transfer(from, to, tokenId);
+        // Mask `to` to the lower 160 bits, in case the upper bits somehow aren't clean.
+        uint256 toMasked = uint256(uint160(to)) & _BITMASK_ADDRESS;
+        assembly {
+            // Emit the `Transfer` event.
+            log4(
+                0, // Start of data (0, since no data).
+                0, // End of data (0, since no data).
+                _TRANSFER_EVENT_SIGNATURE, // Signature.
+                from, // `from`.
+                toMasked, // `to`.
+                tokenId // `tokenId`.
+            )
+        }
+        if (toMasked == 0) revert TransferToZeroAddress();
+
         _afterTokenTransfers(from, to, tokenId, 1);
     }
 
@@ -1050,6 +1093,12 @@ contract ERC721A is IERC721A {
      */
     function _msgSenderERC721A() internal view virtual returns (address) {
         return msg.sender;
+    }
+
+    // TODO: Docs, if it is only used in transferFrom remove function
+    function getCouponType(uint256 tokenId) internal view returns (bool) {
+        if (!_exists(tokenId)) revert OwnerQueryForNonexistentToken();
+        return ((_packedOwnerships[tokenId] >> _BITPOS_TYPE) & 1) != 0;
     }
 
     /**
