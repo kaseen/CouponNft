@@ -22,8 +22,6 @@ interface IERC721A {
         bool burned;
         // Whather the token is soulbound.
         bool soulbound;
-        // TODO: maybe bool
-        uint8 couponType;
         // Number representing the discount of token.
         uint8 percentage;
         // Number of days until token expire.
