@@ -203,7 +203,7 @@ contract ERC721A is IERC721A {
      * @dev Returns the number of tokens in `owner`'s account.
      */
     function balanceOf(address owner) public view virtual override returns (uint256) {
-        if (owner == address(0)) revert BalanceQueryForZeroAddress();
+        if (owner == address(0)) _revert(BalanceQueryForZeroAddress.selector);
         return _packedAddressData[owner] & _BITMASK_ADDRESS_DATA_ENTRY;
     }
 
@@ -288,7 +288,7 @@ contract ERC721A is IERC721A {
      * @dev Returns the Uniform Resource Identifier (URI) for `tokenId` token.
      */
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-        if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
+        if (!_exists(tokenId)) _revert(URIQueryForNonexistentToken.selector);
 
         string memory baseURI = _baseURI();
         return bytes(baseURI).length != 0 ? string(abi.encodePacked(baseURI, _toString(tokenId))) : '';
@@ -345,32 +345,40 @@ contract ERC721A is IERC721A {
     /**
      * Returns the packed ownership data of `tokenId`.
      */
-    function _packedOwnershipOf(uint256 tokenId) private view returns (uint256) {
-        uint256 curr = tokenId;
-
-        unchecked {
-            if (_startTokenId() <= curr)
-                if (curr < _currentIndex) {
-                    uint256 packed = _packedOwnerships[curr];
-                    // If not burned.
-                    if (packed & _BITMASK_BURNED == 0) {
-                        // Invariant:
-                        // There will always be an initialized ownership slot
-                        // (i.e. `ownership.addr != address(0) && ownership.burned == false`)
-                        // before an unintialized ownership slot
-                        // (i.e. `ownership.addr == address(0) && ownership.burned == false`)
-                        // Hence, `curr` will not underflow.
-                        //
-                        // We can directly compare the packed value.
-                        // If the address is zero, packed will be zero.
-                        while (packed == 0) {
-                            packed = _packedOwnerships[--curr];
-                        }
-                        return packed;
+    function _packedOwnershipOf(uint256 tokenId) private view returns (uint256 packed) {
+        if (_startTokenId() <= tokenId) {
+            packed = _packedOwnerships[tokenId];
+            // If the data at the starting slot does not exist, start the scan.
+            if (packed == 0) {
+                if (tokenId >= _currentIndex) _revert(OwnerQueryForNonexistentToken.selector);
+                // Invariant:
+                // There will always be an initialized ownership slot
+                // (i.e. `ownership.addr != address(0) && ownership.burned == false`)
+                // before an unintialized ownership slot
+                // (i.e. `ownership.addr == address(0) && ownership.burned == false`)
+                // Hence, `tokenId` will not underflow.
+                //
+                // We can directly compare the packed value.
+                // If the address is zero, packed will be zero.
+                for (;;) {
+                    unchecked {
+                        packed = _packedOwnerships[--tokenId];
                     }
+                    if (packed == 0) continue;
+                    if (packed & _BITMASK_BURNED == 0) return packed;
+                    // Otherwise, the token is burned, and we must revert.
+                    // This handles the case of batch burned tokens, where only the burned bit
+                    // of the starting slot is set, and remaining slots are left uninitialized.
+                    _revert(OwnerQueryForNonexistentToken.selector);
                 }
+            }
+            // Otherwise, the data exists and we can skip the scan.
+            // This is possible because we have already achieved the target condition.
+            // This saves 2143 gas on transfers of initialized tokens.
+            // If the token is not burned, return `packed`. Otherwise, revert.
+            if (packed & _BITMASK_BURNED == 0) return packed;
         }
-        revert OwnerQueryForNonexistentToken();
+        _revert(OwnerQueryForNonexistentToken.selector);
     }
 
     /**
@@ -380,9 +388,9 @@ contract ERC721A is IERC721A {
         ownership.addr = address(uint160(packed));
         ownership.startTimestamp = uint64(packed >> _BITPOS_START_TIMESTAMP);
         ownership.burned = packed & _BITMASK_BURNED != 0;
-		ownership.soulbound = packed & _BITMASK_SOULBOUND != 0;
+        ownership.soulbound = packed & _BITMASK_SOULBOUND != 0;
         ownership.percentage = uint8(packed >> _BITPOS_PERCENTAGE);
-		ownership.daysValid = uint16(packed >> _BITPOS_DAYS_VALID);
+        ownership.daysValid = uint16(packed >> _BITPOS_DAYS_VALID);
     }
 
     /**
@@ -436,29 +444,21 @@ contract ERC721A is IERC721A {
     // =============================================================
 
     /**
-     * @dev Gives permission to `to` to transfer `tokenId` token to another account.
-     * The approval is cleared when the token is transferred.
-     *
-     * Only a single account can be approved at a time, so approving the
-     * zero address clears previous approvals.
+     * @dev Gives permission to `to` to transfer `tokenId` token to another account. See {ERC721A-_approve}.
      *
      * Requirements:
      *
      * - The caller must own the token or be an approved operator.
-     * - `tokenId` must exist.
-     *
-     * Emits an {Approval} event.
      */
     function approve(address to, uint256 tokenId) public payable virtual override {
-        address owner = ownerOf(tokenId);
+        _approve(to, tokenId, true);
+    }
 
-        if (_msgSenderERC721A() != owner)
-            if (!isApprovedForAll(owner, _msgSenderERC721A())) {
-                revert ApprovalCallerNotOwnerNorApproved();
-            }
-
-        _tokenApprovals[tokenId].value = to;
-        emit Approval(owner, to, tokenId);
+    /**
+     * @dev Equivalent to `_approve(to, tokenId, false)`.
+     */
+    function _approve(address to, uint256 tokenId) internal virtual {
+        _approve(to, tokenId, false);
     }
 
     /**
@@ -469,7 +469,7 @@ contract ERC721A is IERC721A {
      * - `tokenId` must exist.
      */
     function getApproved(uint256 tokenId) public view virtual override returns (address) {
-        if (!_exists(tokenId)) revert ApprovalQueryForNonexistentToken();
+        if (!_exists(tokenId)) _revert(ApprovalQueryForNonexistentToken.selector);
 
         return _tokenApprovals[tokenId].value;
     }
@@ -506,11 +506,14 @@ contract ERC721A is IERC721A {
      *
      * Tokens start existing when they are minted. See {_mint}.
      */
-    function _exists(uint256 tokenId) internal view virtual returns (bool) {
-        return
-            _startTokenId() <= tokenId &&
-            tokenId < _currentIndex && // If within bounds,
-            _packedOwnerships[tokenId] & _BITMASK_BURNED == 0; // and not burned.
+    function _exists(uint256 tokenId) internal view virtual returns (bool result) {
+        if (_startTokenId() <= tokenId) {
+            if (tokenId < _currentIndex) {
+                uint256 packed;
+                while ((packed = _packedOwnerships[tokenId]) == 0) --tokenId;
+                result = packed & _BITMASK_BURNED == 0;
+            }
+        }
     }
 
     /**
@@ -547,6 +550,36 @@ contract ERC721A is IERC721A {
         }
     }
 
+    /**
+     * @dev Gives permission to `to` to transfer `tokenId` token to another account.
+     * The approval is cleared when the token is transferred.
+     *
+     * Only a single account can be approved at a time, so approving the
+     * zero address clears previous approvals.
+     *
+     * Requirements:
+     *
+     * - The caller must own the token or be an approved operator.
+     * - `tokenId` must exist.
+     *
+     * Emits an {Approval} event.
+     */
+    function _approve(
+        address to,
+        uint256 tokenId,
+        bool approvalCheck
+    ) internal virtual {
+        address owner = ownerOf(tokenId);
+
+        if (approvalCheck && _msgSenderERC721A() != owner)
+            if (!isApprovedForAll(owner, _msgSenderERC721A())) {
+                _revert(ApprovalCallerNotOwnerNorApproved.selector);
+            }
+
+        _tokenApprovals[tokenId].value = to;
+        emit Approval(owner, to, tokenId);
+    }
+
     // =============================================================
     //                      TRANSFER OPERATIONS
     // =============================================================
@@ -574,16 +607,16 @@ contract ERC721A is IERC721A {
         // Mask `from` to the lower 160 bits, in case the upper bits somehow aren't clean.
         from = address(uint160(uint256(uint160(from)) & _BITMASK_ADDRESS));
 
-        if (address(uint160(prevOwnershipPacked)) != from) revert TransferFromIncorrectOwner();
+        if (address(uint160(prevOwnershipPacked)) != from) _revert(TransferFromIncorrectOwner.selector);
 
         // Revert if token is soulbound
-        if(prevOwnershipPacked & _BITMASK_SOULBOUND != 0) revert TransferSoulboundToken();
+        if(prevOwnershipPacked & _BITMASK_SOULBOUND != 0) _revert(TransferSoulboundToken.selector);
 
         (uint256 approvedAddressSlot, address approvedAddress) = _getApprovedSlotAndAddress(tokenId);
 
         // The nested ifs save around 20+ gas over a compound boolean condition.
         if (!_isSenderApprovedOrOwner(approvedAddress, from, _msgSenderERC721A()))
-            if (!isApprovedForAll(from, _msgSenderERC721A())) revert TransferCallerNotOwnerNorApproved();
+            if (!isApprovedForAll(from, _msgSenderERC721A())) _revert(TransferCallerNotOwnerNorApproved.selector);
 
         _beforeTokenTransfers(from, to, tokenId, 1);
 
@@ -639,7 +672,7 @@ contract ERC721A is IERC721A {
                 tokenId // `tokenId`.
             )
         }
-        if (toMasked == 0) revert TransferToZeroAddress();
+        if (toMasked == 0) _revert(TransferToZeroAddress.selector);
 
         _afterTokenTransfers(from, to, tokenId, 1);
     }
@@ -679,7 +712,7 @@ contract ERC721A is IERC721A {
         transferFrom(from, to, tokenId);
         if (to.code.length != 0)
             if (!_checkContractOnERC721Received(from, to, tokenId, _data)) {
-                revert TransferToNonERC721ReceiverImplementer();
+                _revert(TransferToNonERC721ReceiverImplementer.selector);
             }
     }
 
@@ -751,7 +784,7 @@ contract ERC721A is IERC721A {
             return retval == ERC721A__IERC721Receiver(to).onERC721Received.selector;
         } catch (bytes memory reason) {
             if (reason.length == 0) {
-                revert TransferToNonERC721ReceiverImplementer();
+                _revert(TransferToNonERC721ReceiverImplementer.selector);
             } else {
                 assembly {
                     revert(add(32, reason), mload(reason))
@@ -782,13 +815,13 @@ contract ERC721A is IERC721A {
         uint256 daysValid
     ) internal virtual {
         uint256 startTokenId = _currentIndex;
-        if (quantity == 0) revert MintZeroQuantity();
+        if (quantity == 0) _revert(MintZeroQuantity.selector);
 
         // Revert if percentage > 100
-        if(percentage > 100 || percentage == 0) revert MintInvalidPercentage();
+        if(percentage > 100 || percentage == 0) _revert(MintInvalidPercentage.selector);
 
         // Revert if daysValid > 2**16 - 1
-        if(daysValid > 65535 || daysValid == 0) revert MintInvalidDays();
+        if(daysValid > 65535 || daysValid == 0) _revert(MintInvalidDays.selector);
 
         _beforeTokenTransfers(address(0), to, startTokenId, quantity);
 
@@ -819,7 +852,7 @@ contract ERC721A is IERC721A {
             // Mask `to` to the lower 160 bits, in case the upper bits somehow aren't clean.
             uint256 toMasked = uint256(uint160(to)) & _BITMASK_ADDRESS;
 
-            if (toMasked == 0) revert MintToZeroAddress();
+            if (toMasked == 0) _revert(MintToZeroAddress.selector);
 
             uint256 end = startTokenId + quantity;
             uint256 tokenId = startTokenId;
@@ -874,11 +907,11 @@ contract ERC721A is IERC721A {
                 uint256 index = end - quantity;
                 do {
                     if (!_checkContractOnERC721Received(address(0), to, index++, _data)) {
-                        revert TransferToNonERC721ReceiverImplementer();
+                        _revert(TransferToNonERC721ReceiverImplementer.selector);
                     }
                 } while (index < end);
                 // Reentrancy protection.
-                if (_currentIndex != end) revert();
+                if (_currentIndex != end) _revert(bytes4(0));
             }
         }
     }
@@ -921,7 +954,7 @@ contract ERC721A is IERC721A {
         if (approvalCheck) {
             // The nested ifs save around 20+ gas over a compound boolean condition.
             if (!_isSenderApprovedOrOwner(approvedAddress, from, _msgSenderERC721A()))
-                if (!isApprovedForAll(from, _msgSenderERC721A())) revert TransferCallerNotOwnerNorApproved();
+                if (!isApprovedForAll(from, _msgSenderERC721A())) _revert(TransferCallerNotOwnerNorApproved.selector);
         }
 
         _beforeTokenTransfers(from, address(0), tokenId, 1);
@@ -1034,6 +1067,16 @@ contract ERC721A is IERC721A {
             str := sub(str, 0x20)
             // Store the length.
             mstore(str, length)
+        }
+    }
+
+    /**
+     * @dev For more efficient reverts.
+     */
+    function _revert(bytes4 errorSelector) internal pure {
+        assembly {
+            mstore(0x00, errorSelector)
+            revert(0x00, 0x04)
         }
     }
 }
