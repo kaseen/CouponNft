@@ -8,6 +8,14 @@ pragma solidity ^0.8.19;
  */
 interface IERC721 {
 
+    struct CouponInfo {
+        address owner;
+        uint64 startTimestamp;
+        bool soulbound;
+        uint8 percentage;
+        uint16 daysValid;
+    }
+
     /**
      * @dev Emitted when `tokenId` token is transferred from `from` to `to`.
      */
@@ -194,4 +202,19 @@ interface IERC721 {
      * @param operator Address that may be allowed to operate on tokens without being their owner.
      */
     error ERC721InvalidOperator(address operator);
+
+    /**
+     * Cannot transfer soulbound token.
+     */
+    error TransferSoulboundToken();
+
+    /**
+     * The `percentage` is bigger than 100.
+     */
+    error MintInvalidPercentage();
+
+    /**
+     * The `daysValid` is bigger than 2**16 - 1.
+     */
+    error MintInvalidDays();
 }

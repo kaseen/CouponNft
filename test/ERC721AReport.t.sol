@@ -22,8 +22,8 @@ contract ERC721ATest is ERC721A, Test {
         super._mint(address(user2), 1, false, 10, 100);
         super._mint(address(user1), 2, false, 10, 100);
 
-        user1.approveTo(address(user2), 1);
-        user2.approveTo(address(user1), 3);
+        user1.__ERC721A__operatorApproval(address(user2));
+        user2.__ERC721A__operatorApproval(address(user1));
     }
 
     function testMintSingle() public {
@@ -35,10 +35,6 @@ contract ERC721ATest is ERC721A, Test {
     }
 
     function testTransferSingle() public {
-        user2.transferTo(address(user1), 3);
-    }
-
-    function testTransferMultiple() public {
-        user1.transferTo(address(user2), 1);
+        user1.__ERC721A__transferTo(address(user2), 0);
     }
 }
