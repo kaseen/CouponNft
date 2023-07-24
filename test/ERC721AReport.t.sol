@@ -20,11 +20,12 @@ contract ERC721ATest is ERC721A, Test {
         // Setup
         super._mint(address(user1), 2, false, 10, 100);
         super._mint(address(user2), 1, false, 10, 100);
-        super._mint(address(user1), 2, false, 10, 100);
 
         user1.__ERC721A__operatorApproval(address(user2));
         user2.__ERC721A__operatorApproval(address(user1));
     }
+
+    // TODO: relationship between minting multiple and transfering (sstore cost)
 
     function testMintSingle() public {
         super._mint(msg.sender, 1, true, 10, 50);
@@ -34,7 +35,19 @@ contract ERC721ATest is ERC721A, Test {
         super._mint(msg.sender, 6, true, 10, 50);
     }
 
-    function testTransferSingle() public {
+    function testTransferInitialized() public {
+        user2.__ERC721A__transferTo(address(user1), 2);
+    }
+
+    function testTransferNotInitialized() public {
         user1.__ERC721A__transferTo(address(user2), 0);
+    }
+
+    function testBurnInitialized() public {
+        super._burn(2);
+    }
+
+    function testBurnNotInitialized() public {
+        super._burn(0);
     }
 }

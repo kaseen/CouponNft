@@ -402,7 +402,7 @@ contract ERC721 is IERC721 {
         }
 
         _owners[_currentIndex] = CouponInfo({ 
-            owner: msg.sender,
+            owner: to,
             startTimestamp: uint64(block.timestamp),
             soulbound: soulbound,
             percentage: uint8(percentage),

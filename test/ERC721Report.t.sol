@@ -36,6 +36,10 @@ contract ERC721Test is ERC721, Test {
     }
 
     function testTransferSingle() public {
-        //user1.__ERC721__transferTo(address(user2), 0);
+        user1.__ERC721__transferTo(address(user2), 0);
+    }
+
+    function testBurn() public {
+        super._burn(0);
     }
 }
