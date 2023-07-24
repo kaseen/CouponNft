@@ -4,8 +4,8 @@ pragma solidity ^0.8.13;
 import { ERC721 } from 'src/ERC721.sol';
 import { User } from './User.sol';
 import 'forge-std/Test.sol';
-import 'forge-std/console.sol';
 
+// TODO: Write why good arrangement of struct field maters
 contract ERC721Test is ERC721, Test {
 
     constructor() ERC721('Test', 'Test'){}
@@ -30,12 +30,12 @@ contract ERC721Test is ERC721, Test {
     }
 
     function testMintMultiple() public {
-        uint256 n = 5;
+        uint256 n = 6;
         for(uint256 i; i < n; ++i)
             super._mint(msg.sender, true, 10, 50);
     }
 
-    function testTransferSingle() public {
+    function testTransfer() public {
         user1.__ERC721__transferTo(address(user2), 0);
     }
 

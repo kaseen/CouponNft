@@ -4,7 +4,6 @@ pragma solidity ^0.8.13;
 import { ERC721A } from 'src/ERC721A.sol';
 import { User } from './User.sol';
 import 'forge-std/Test.sol';
-import 'forge-std/console.sol';
 
 contract ERC721ATest is ERC721A, Test {
 
@@ -26,6 +25,7 @@ contract ERC721ATest is ERC721A, Test {
     }
 
     // TODO: relationship between minting multiple and transfering (sstore cost)
+    // TODO: burn check timestamp
 
     function testMintSingle() public {
         super._mint(msg.sender, 1, true, 10, 50);
