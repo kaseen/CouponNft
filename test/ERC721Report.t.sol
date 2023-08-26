@@ -5,7 +5,6 @@ import { ERC721 } from 'src/ERC721.sol';
 import { User } from './User.sol';
 import 'forge-std/Test.sol';
 
-// TODO: Write why good arrangement of struct field maters
 contract ERC721Test is ERC721, Test {
 
     constructor() ERC721('Test', 'Test'){}

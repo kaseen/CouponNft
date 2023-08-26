@@ -5,7 +5,7 @@ import { CouponClassic } from 'src/CouponClassic.sol';
 import { User } from './User.sol';
 import 'forge-std/Test.sol';
 
-contract NeonCouponTest is Test {
+contract CouponClassicTest is Test {
 
     uint256 public volume;
     mapping(uint256 => address) public coupons;
