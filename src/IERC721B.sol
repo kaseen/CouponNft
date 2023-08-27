@@ -48,6 +48,7 @@ interface IERC721B {
     error URIQueryForNonexistentToken();
     error MintInvalidPercentage();
     error MintInvalidDays();
+    error TransferNonGiftableToken();
 
     function ownerOf(uint256 tokenId) external view returns (address owner);
 }

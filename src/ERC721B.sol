@@ -28,6 +28,7 @@ interface IERC721Receiver {
  */
 
 contract ERC721B is IERC721B {
+
     /*///////////////////////////////////////////////////////////////
                              MASKS FOR PACKING
     //////////////////////////////////////////////////////////////*/
@@ -171,29 +172,6 @@ contract ERC721B is IERC721B {
     */
 
     /**
-     * @dev See {IERC721-ownerOf}.
-     *      Gas spent here starts off proportional to the maximum mint batch size.
-     *      It gradually moves to O(1) as tokens get transferred around in the collection over time.
-     */
-    /*
-    TODO
-    function ownerOf(uint256 tokenId) public view virtual returns (address) {
-        if (!_exists(tokenId)) revert OwnerQueryForNonexistentToken();
-
-        // Cannot realistically overflow, since we are using uint256
-        unchecked {
-            for (tokenId; ; tokenId++) {
-                if (_owners[tokenId] != address(0)) {
-                    return _owners[tokenId];
-                }
-            }
-        }
-
-        revert UnableDetermineTokenOwner();
-    }
-    */
-
-    /**
      * @dev See {IERC721-approve}.
      */
     /*
@@ -238,8 +216,6 @@ contract ERC721B is IERC721B {
     /**
      * @dev See {IERC721-transferFrom}.
      */
-    /*
-    TODO
     function transferFrom(
         address from,
         address to,
@@ -249,6 +225,9 @@ contract ERC721B is IERC721B {
         if (ownerOf(tokenId) != from) revert TransferFromIncorrectOwner();
         if (to == address(0)) revert TransferToZeroAddress();
 
+        uint256 previousOwnerInfo = _packedOwnershipOf(tokenId);
+        if (previousOwnerInfo & _BITMASK_GIFTABLE == 0) revert TransferNonGiftableToken();
+
         bool isApprovedOrOwner = (msg.sender == from ||
             msg.sender == getApproved(tokenId) ||
             isApprovedForAll(from, msg.sender));
@@ -256,17 +235,23 @@ contract ERC721B is IERC721B {
 
         // delete token approvals from previous owner
         delete _tokenApprovals[tokenId];
-        _owners[tokenId] = to;
+
+        uint256 result;
+        assembly {
+            result := and(to, _BITMASK_ADDRESS)
+            result := or(result, shl(_BITPOS_START_TIMESTAMP, shr(_BITPOS_START_TIMESTAMP, previousOwnerInfo)))
+        }
+
+        _owners[tokenId] = result;
 
         // if token ID below transferred one isnt set, set it to previous owner
         // if tokenid is zero, skip this to prevent underflow
-        if (tokenId > 0 && _owners[tokenId - 1] == address(0)) {
-            _owners[tokenId - 1] = from;
+        if (tokenId > 0 && _owners[tokenId - 1] == 0) {
+            _owners[tokenId - 1] = previousOwnerInfo;
         }
 
         emit Transfer(from, to, tokenId);
     }
-    */
 
     /**
      * @dev See {IERC721-safeTransferFrom}.
@@ -349,29 +334,32 @@ contract ERC721B is IERC721B {
      *      is only called once. If the receiving contract confirms the transfer of one token,
      *      all additional tokens are automatically confirmed too.
      */
-    /*
-    TODO
-    function _safeMint(address to, uint256 qty) internal virtual {
-        _safeMint(to, qty, '');
+    function _safeMint(
+        address to,
+        uint256 qty,
+        bool giftable,
+        uint256 percentage,
+        uint256 daysValid
+    ) internal virtual {
+        _safeMint(to, qty, giftable, percentage, daysValid, '');
     }
-    */
 
     /**
      * @dev Equivalent to {safeMint(to, qty)}, but accepts an additional data argument.
      */
-    /*
-    TODO
     function _safeMint(
         address to,
         uint256 qty,
+        bool giftable,
+        uint256 percentage,
+        uint256 daysValid,
         bytes memory data
     ) internal virtual {
-        _mint(to, qty);
+        _mint(to, qty, giftable, percentage, daysValid);
 
         if (!_checkOnERC721Received(address(0), to, _owners.length - 1, data))
             revert TransferToNonERC721ReceiverImplementer();
     }
-    */
 
     /**
      * @dev Mints `qty` tokens and transfers them to `to`.
