@@ -114,8 +114,6 @@ contract ERC721B is IERC721B {
      * It is not recommended to call this function on chain from another smart contract,
      * as it can become quite expensive for larger collections.
      */
-    /*
-    TODO
     function tokenOfOwnerByIndex(address owner, uint256 index) public view virtual returns (uint256 tokenId) {
         if (index >= balanceOf(owner)) revert OwnerIndexOutOfBounds();
 
@@ -133,7 +131,6 @@ contract ERC721B is IERC721B {
 
         revert UnableGetTokenOwnerByIndex();
     }
-    */
 
     /**
      * @dev See {IERC721Enumerable-tokenByIndex}.
@@ -152,8 +149,6 @@ contract ERC721B is IERC721B {
      *      Iterates through _owners array -- it is not recommended to call this function
      *      from another contract, as it can become quite expensive for larger collections.
      */
-    /*
-    TODO
     function balanceOf(address owner) public view virtual returns (uint256) {
         if (owner == address(0)) revert BalanceQueryForZeroAddress();
 
@@ -169,13 +164,10 @@ contract ERC721B is IERC721B {
         }
         return count;
     }
-    */
 
     /**
      * @dev See {IERC721-approve}.
      */
-    /*
-    TODO
     function approve(address to, uint256 tokenId) public virtual {
         address owner = ownerOf(tokenId);
         if (to == owner) revert ApprovalToCurrentOwner();
@@ -185,7 +177,6 @@ contract ERC721B is IERC721B {
         _tokenApprovals[tokenId] = to;
         emit Approval(owner, to, tokenId);
     }
-    */
 
     /**
      * @dev See {IERC721-getApproved}.
@@ -233,6 +224,8 @@ contract ERC721B is IERC721B {
             isApprovedForAll(from, msg.sender));
         if (!isApprovedOrOwner) revert TransferCallerNotOwnerNorApproved();
 
+        _beforeTokenTransfers(from, to, tokenId, 1);
+
         // delete token approvals from previous owner
         delete _tokenApprovals[tokenId];
 
@@ -250,14 +243,14 @@ contract ERC721B is IERC721B {
             _owners[tokenId - 1] = previousOwnerInfo;
         }
 
+        _afterTokenTransfers(from, to, tokenId, 1);
+
         emit Transfer(from, to, tokenId);
     }
 
     /**
      * @dev See {IERC721-safeTransferFrom}.
      */
-    /*
-    TODO
     function safeTransferFrom(
         address from,
         address to,
@@ -265,13 +258,10 @@ contract ERC721B is IERC721B {
     ) public virtual {
         safeTransferFrom(from, to, id, '');
     }
-    */
 
     /**
      * @dev See {IERC721-safeTransferFrom}.
      */
-    /*
-    TODO
     function safeTransferFrom(
         address from,
         address to,
@@ -282,7 +272,20 @@ contract ERC721B is IERC721B {
 
         if (!_checkOnERC721Received(from, to, id, data)) revert TransferToNonERC721ReceiverImplementer();
     }
-    */
+
+    function _beforeTokenTransfers(
+        address from,
+        address to,
+        uint256 startTokenId,
+        uint256 quantity
+    ) internal virtual {}
+
+    function _afterTokenTransfers(
+        address from,
+        address to,
+        uint256 startTokenId,
+        uint256 quantity
+    ) internal virtual {}
 
     /**
      * @dev Returns whether `tokenId` exists.
@@ -371,9 +374,9 @@ contract ERC721B is IERC721B {
         if (percentage > 100 || percentage == 0) revert MintInvalidPercentage();
         if (daysValid > 65535 || daysValid == 0) revert MintInvalidDays();
 
-        // TODO: _beforeTokenTransfers(address(0), to, startTokenId, quantity);
-
         uint256 _currentIndex = _owners.length;
+
+        _beforeTokenTransfers(address(0), to, _currentIndex, qty);
 
         // Cannot realistically overflow, since we are using uint256
         unchecked {
@@ -396,7 +399,7 @@ contract ERC721B is IERC721B {
         _owners.push(result);
         emit Transfer(address(0), to, _currentIndex + (qty - 1));
 
-        // TODO: _afterTokenTransfers(address(0), to, startTokenId, quantity);
+        _afterTokenTransfers(address(0), to, _currentIndex, qty);
     }
 
     /*///////////////////////////////////////////////////////////////
