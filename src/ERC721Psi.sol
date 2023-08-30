@@ -154,15 +154,17 @@ contract ERC721Psi is IERC721Psi {
         override
         returns (address)
     {
-        (address owner, ) = _ownerAndBatchHeadOf(tokenId);
-        return owner;
+        (uint256 packedOwnership, ) = _packedOwnershipAndBatchHeadOf(tokenId);
+        return address(uint160(packedOwnership));
     }
 
-
-    function _ownerAndBatchHeadOf(uint256 tokenId) internal view returns (address owner, uint256 tokenIdBatchHead) {
+    function _packedOwnershipAndBatchHeadOf(uint256 tokenId)
+        internal
+        view
+        returns (uint256 packedOwnership, uint256 tokenIdBatchHead) {
         require(_exists(tokenId), "ERC721Psi: owner query for nonexistent token");
         tokenIdBatchHead = _getBatchHead(tokenId);
-        owner = address(uint160(_owners[tokenIdBatchHead]));
+        packedOwnership = _owners[tokenIdBatchHead];
     }
 
     function _ownershipOf(uint256 tokenId) internal view returns (CouponInfo memory ownership) {
@@ -278,7 +280,6 @@ contract ERC721Psi is IERC721Psi {
     /**
      * @dev See {IERC721-transferFrom}.
      */
-    /* TODO
     function transferFrom(
         address from,
         address to,
@@ -296,8 +297,6 @@ contract ERC721Psi is IERC721Psi {
     /**
      * @dev See {IERC721-safeTransferFrom}.
      */
-    /*
-    TODO
     function safeTransferFrom(
         address from,
         address to,
@@ -309,8 +308,6 @@ contract ERC721Psi is IERC721Psi {
     /**
      * @dev See {IERC721-safeTransferFrom}.
      */
-    /*
-    TODO
     function safeTransferFrom(
         address from,
         address to,
@@ -342,8 +339,6 @@ contract ERC721Psi is IERC721Psi {
      *
      * Emits a {Transfer} event.
      */
-    /*
-    TODO
     function _safeTransfer(
         address from,
         address to,
@@ -352,7 +347,7 @@ contract ERC721Psi is IERC721Psi {
     ) internal virtual {
         _transfer(from, to, tokenId);
         require(
-            _checkOnERC721Received(from, to, tokenId, 1,_data),
+            _checkOnERC721Received(from, to, tokenId, 1, _data),
             "ERC721Psi: transfer to non ERC721Receiver implementer"
         );
     }
@@ -504,17 +499,15 @@ contract ERC721Psi is IERC721Psi {
      *
      * Emits a {Transfer} event.
      */
-    /*
-    TODO
     function _transfer(
         address from,
         address to,
         uint256 tokenId
     ) internal virtual {
-        (address owner, uint256 tokenIdBatchHead) = _ownerAndBatchHeadOf(tokenId);
+        (uint256 previousOwnershipInfo, uint256 tokenIdBatchHead) = _packedOwnershipAndBatchHeadOf(tokenId);
 
         require(
-            owner == from,
+            address(uint160(previousOwnershipInfo)) == from,
             "ERC721Psi: transfer of token that is not own"
         );
         require(to != address(0), "ERC721Psi: transfer to the zero address");
@@ -529,11 +522,19 @@ contract ERC721Psi is IERC721Psi {
         if(!_batchHead.get(subsequentTokenId) &&  
             subsequentTokenId < _nextTokenId()
         ) {
-            _owners[subsequentTokenId] = from;
+            _owners[subsequentTokenId] = previousOwnershipInfo;
             _batchHead.set(subsequentTokenId);
         }
 
-        _owners[tokenId] = to;
+        // Change address to from in packedOwnershipInfo and save in _owners mapping new owner
+        uint256 result;
+        assembly {
+            result := and(to, _BITMASK_ADDRESS)
+            result := or(result, shl(_BITPOS_START_TIMESTAMP, shr(_BITPOS_START_TIMESTAMP, previousOwnershipInfo)))
+        }
+        _owners[tokenId] = result;
+
+        
         if(tokenId != tokenIdBatchHead) {
             _batchHead.set(tokenId);
         }
