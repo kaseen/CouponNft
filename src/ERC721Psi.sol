@@ -9,7 +9,7 @@
 
  - github: https://github.com/estarriolvetch/ERC721Psi
  - npm: https://www.npmjs.com/package/erc721psi
-                                          
+
  */
 
 pragma solidity ^0.8.0;
@@ -23,10 +23,31 @@ interface IERC721Receiver {
     ) external returns (bytes4);
 }
 
-import { IERC721 } from './ERC721.sol';
+import { IERC721Psi } from './IERC721Psi.sol';
 import { BitMaps } from './libs/BitMaps.sol';
 
-contract ERC721Psi is IERC721 {
+contract ERC721Psi is IERC721Psi {
+
+    // The mask of the lower 160 bits for addresses.
+    uint256 private constant _BITMASK_ADDRESS = (1 << 160) - 1;
+
+    // The bit mask of the `burned` bit in packed ownership.
+    uint256 private constant _BITMASK_BURNED = 1 << 224;
+
+    // The bit mask of the `giftable` bit in packed ownership.
+    uint256 private constant _BITMASK_GIFTABLE = 1 << 226;
+
+    // The bit position of `startTimestamp` in packed ownership.
+    uint256 private constant _BITPOS_START_TIMESTAMP = 160;
+
+    // The bit position of the `giftable` bit in packed ownership.
+    uint256 private constant _BITPOS_GIFTABLE = 226;
+
+    // The bit position of `percentage` in packed ownership.
+    uint256 private constant _BITPOS_PERCENTAGE = 232;
+
+    // The bit position of `daysValid` in packed ownership.
+    uint256 private constant _BITPOS_DAYS_VALID = 240;
 
     using BitMaps for BitMaps.BitMap;
 
@@ -36,14 +57,12 @@ contract ERC721Psi is IERC721 {
     string private _symbol;
 
     // Mapping from token ID to owner address
-    mapping(uint256 => address) internal _owners;
+    mapping(uint256 => uint256) internal _owners;
     uint256 private _currentIndex;
 
     mapping(uint256 => address) private _tokenApprovals;
     mapping(address => mapping(address => bool)) private _operatorApprovals;
 
-    // The mask of the lower 160 bits for addresses.
-    uint256 private constant _BITMASK_ADDRESS = (1 << 160) - 1;
     // The `Transfer` event signature is given by:
     // `keccak256(bytes("Transfer(address,address,uint256)"))`.
     bytes32 private constant _TRANSFER_EVENT_SIGNATURE =
@@ -120,6 +139,11 @@ contract ERC721Psi is IERC721 {
         return count;
     }
 
+
+    // =============================================================
+    //                     OWNERSHIPS OPERATIONS
+    // =============================================================
+
     /**
      * @dev See {IERC721-ownerOf}.
      */
@@ -134,11 +158,28 @@ contract ERC721Psi is IERC721 {
         return owner;
     }
 
-    function _ownerAndBatchHeadOf(uint256 tokenId) internal view returns (address owner, uint256 tokenIdBatchHead){
+
+    function _ownerAndBatchHeadOf(uint256 tokenId) internal view returns (address owner, uint256 tokenIdBatchHead) {
         require(_exists(tokenId), "ERC721Psi: owner query for nonexistent token");
         tokenIdBatchHead = _getBatchHead(tokenId);
-        owner = _owners[tokenIdBatchHead];
+        owner = address(uint160(_owners[tokenIdBatchHead]));
     }
+
+    function _ownershipOf(uint256 tokenId) internal view returns (CouponInfo memory ownership) {
+        uint256 tokenIdBatchHead = _getBatchHead(tokenId);
+        uint256 packedOwnership = _owners[tokenIdBatchHead];
+
+        ownership.owner = address(uint160(packedOwnership));
+        ownership.startTimestamp = uint64(packedOwnership >> _BITPOS_START_TIMESTAMP);
+        ownership.giftable = packedOwnership & _BITMASK_GIFTABLE != 0;
+        ownership.percentage = uint8(packedOwnership >> _BITPOS_PERCENTAGE);
+        ownership.daysValid = uint16(packedOwnership >> _BITPOS_DAYS_VALID);
+    }
+
+
+    // =============================================================
+    //                        IERC721Metadata
+    // =============================================================
 
     /**
      * @dev See {IERC721Metadata-name}.
@@ -237,6 +278,7 @@ contract ERC721Psi is IERC721 {
     /**
      * @dev See {IERC721-transferFrom}.
      */
+    /* TODO
     function transferFrom(
         address from,
         address to,
@@ -254,6 +296,8 @@ contract ERC721Psi is IERC721 {
     /**
      * @dev See {IERC721-safeTransferFrom}.
      */
+    /*
+    TODO
     function safeTransferFrom(
         address from,
         address to,
@@ -265,6 +309,8 @@ contract ERC721Psi is IERC721 {
     /**
      * @dev See {IERC721-safeTransferFrom}.
      */
+    /*
+    TODO
     function safeTransferFrom(
         address from,
         address to,
@@ -296,6 +342,8 @@ contract ERC721Psi is IERC721 {
      *
      * Emits a {Transfer} event.
      */
+    /*
+    TODO
     function _safeTransfer(
         address from,
         address to,
@@ -353,37 +401,59 @@ contract ERC721Psi is IERC721 {
      *
      * Emits a {Transfer} event.
      */
-    function _safeMint(address to, uint256 quantity) internal virtual {
-        _safeMint(to, quantity, "");
-    }
-
-    
     function _safeMint(
         address to,
         uint256 quantity,
+        bool giftable,
+        uint256 percentage,
+        uint256 daysValid
+    ) internal virtual {
+        _safeMint(to, quantity, giftable, percentage, daysValid, "");
+    }
+
+    function _safeMint(
+        address to,
+        uint256 quantity,
+        bool giftable,
+        uint256 percentage,
+        uint256 daysValid,
         bytes memory _data
     ) internal virtual {
         uint256 nextTokenId = _nextTokenId();
-        _mint(to, quantity);
+        _mint(to, quantity, giftable, percentage, daysValid);
         require(
             _checkOnERC721Received(address(0), to, nextTokenId, quantity, _data),
             "ERC721Psi: transfer to non ERC721Receiver implementer"
         );
     }
 
-
     function _mint(
         address to,
-        uint256 quantity
+        uint256 quantity,
+        bool giftable,
+        uint256 percentage,
+        uint256 daysValid
     ) internal virtual {
         uint256 nextTokenId = _nextTokenId();
-        
+
         require(quantity > 0, "ERC721Psi: quantity must be greater 0");
         require(to != address(0), "ERC721Psi: mint to the zero address");
-        
+        require(percentage > 0 && percentage < 101, "ERC721Psi: invalid percentage");
+        require(daysValid > 0 && daysValid < 65536, "ERC721Psi: invalid days");
+
         _beforeTokenTransfers(address(0), to, nextTokenId, quantity);
         _currentIndex += quantity;
-        _owners[nextTokenId] = to;
+
+        uint256 result;
+        assembly {
+            result := and(to, _BITMASK_ADDRESS)
+            result := or(result, shl(_BITPOS_START_TIMESTAMP, timestamp()))
+            result := or(result, shl(_BITPOS_GIFTABLE, giftable))
+            result := or(result, shl(_BITPOS_PERCENTAGE, percentage))
+            result := or(result, shl(_BITPOS_DAYS_VALID, daysValid))
+        }
+        _owners[nextTokenId] = result;
+
         _batchHead.set(nextTokenId);
 
         uint256 toMasked;
@@ -434,6 +504,8 @@ contract ERC721Psi is IERC721 {
      *
      * Emits a {Transfer} event.
      */
+    /*
+    TODO
     function _transfer(
         address from,
         address to,
