@@ -4,7 +4,7 @@
 
 pragma solidity ^0.8.4;
 
-import './IERC721A.sol';
+import './interfaces/IERC721A.sol';
 
 /**
  * @dev Interface of ERC721 token receiver.
@@ -70,11 +70,11 @@ contract ERC721A is IERC721A {
     // The bit mask of the `nextInitialized` bit in packed ownership.
     uint256 private constant _BITMASK_NEXT_INITIALIZED = 1 << 225;
 
-    // The bit position of the `soulbound` bit in packed ownership.
-    uint256 private constant _BITPOS_SOULBOUND = 226;
+    // The bit position of the `giftable` bit in packed ownership.
+    uint256 private constant _BITPOS_GIFTABLE = 226;
 
-    // The bit mask of the `soulbound` bit in packed ownership.
-    uint256 private constant _BITMASK_SOULBOUND = 1 << 226;
+    // The bit mask of the `giftable` bit in packed ownership.
+    uint256 private constant _BITMASK_GIFTABLE = 1 << 226;
 
     // The bit position of `percentage` in packed ownership.
     uint256 private constant _BITPOS_PERCENTAGE = 232;
@@ -115,7 +115,7 @@ contract ERC721A is IERC721A {
     // - [160..223]   `startTimestamp`
     // - [224]        `burned`
     // - [225]        `nextInitialized`
-    // - [226]        `soulbound`
+    // - [226]        `giftable`
     // - [232..239]   `percentage`
     // - [240..255]   `daysValid`
     mapping(uint256 => uint256) private _packedOwnerships;
@@ -322,14 +322,14 @@ contract ERC721A is IERC721A {
      * @dev Gas spent here starts off proportional to the maximum mint batch size.
      * It gradually moves to O(1) as tokens get transferred around over time.
      */
-    function _ownershipOf(uint256 tokenId) internal view virtual returns (TokenOwnership memory) {
+    function _ownershipOf(uint256 tokenId) internal view virtual returns (CouponInfo memory) {
         return _unpackedOwnership(_packedOwnershipOf(tokenId));
     }
 
     /**
      * @dev Returns the unpacked `TokenOwnership` struct at `index`.
      */
-    function _ownershipAt(uint256 index) internal view virtual returns (TokenOwnership memory) {
+    function _ownershipAt(uint256 index) internal view virtual returns (CouponInfo memory) {
         return _unpackedOwnership(_packedOwnerships[index]);
     }
 
@@ -384,11 +384,11 @@ contract ERC721A is IERC721A {
     /**
      * @dev Returns the unpacked `TokenOwnership` struct from `packed`.
      */
-    function _unpackedOwnership(uint256 packed) private pure returns (TokenOwnership memory ownership) {
+    function _unpackedOwnership(uint256 packed) private pure returns (CouponInfo memory ownership) {
         ownership.addr = address(uint160(packed));
         ownership.startTimestamp = uint64(packed >> _BITPOS_START_TIMESTAMP);
         ownership.burned = packed & _BITMASK_BURNED != 0;
-        ownership.soulbound = packed & _BITMASK_SOULBOUND != 0;
+        ownership.giftable = packed & _BITMASK_GIFTABLE != 0;
         ownership.percentage = uint8(packed >> _BITPOS_PERCENTAGE);
         ownership.daysValid = uint16(packed >> _BITPOS_DAYS_VALID);
     }
@@ -430,12 +430,12 @@ contract ERC721A is IERC721A {
     }
 
     /**
-     * @dev Returns the `soulbound` flag.
+     * @dev Returns the `giftable` flag.
      */
-    function _soulboundFlag(bool soulbound) private pure returns (uint256 result) {
+    function _giftableFlag(bool giftable) private pure returns (uint256 result) {
         assembly {
-            // `soulbound << _BITPOS_NEXT_INITIALIZED`.
-            result := shl(_BITPOS_SOULBOUND, soulbound)
+            // `giftable << _BITPOS_NEXT_INITIALIZED`.
+            result := shl(_BITPOS_GIFTABLE, giftable)
         }
     }
 
@@ -609,8 +609,8 @@ contract ERC721A is IERC721A {
 
         if (address(uint160(prevOwnershipPacked)) != from) _revert(TransferFromIncorrectOwner.selector);
 
-        // Revert if token is soulbound
-        if(prevOwnershipPacked & _BITMASK_SOULBOUND != 0) _revert(TransferSoulboundToken.selector);
+        // Revert if token is giftable
+        if(prevOwnershipPacked & _BITMASK_GIFTABLE == 0) _revert(TransferNonGiftableToken.selector);
 
         (uint256 approvedAddressSlot, address approvedAddress) = _getApprovedSlotAndAddress(tokenId);
 
@@ -810,7 +810,7 @@ contract ERC721A is IERC721A {
     function _mint(
         address to,
         uint256 quantity,
-        bool soulbound,
+        bool giftable,
         uint256 percentage,
         uint256 daysValid
     ) internal virtual {
@@ -837,7 +837,7 @@ contract ERC721A is IERC721A {
             _packedOwnerships[startTokenId] = _packOwnershipData(
                 to,
                 _nextInitializedFlag(quantity) |
-                _soulboundFlag(soulbound) |
+                _giftableFlag(giftable) |
                 percentage << _BITPOS_PERCENTAGE |
                 daysValid << _BITPOS_DAYS_VALID
             );
@@ -894,12 +894,12 @@ contract ERC721A is IERC721A {
     function _safeMint(
         address to,
         uint256 quantity,
-        bool soulbound,
+        bool giftable,
         uint256 percentage,
         uint256 daysValid,
         bytes memory _data
     ) internal virtual {
-        _mint(to, quantity, soulbound, percentage, daysValid);
+        _mint(to, quantity, giftable, percentage, daysValid);
 
         unchecked {
             if (to.code.length != 0) {
@@ -917,10 +917,10 @@ contract ERC721A is IERC721A {
     }
 
     /**
-     * @dev Equivalent to `_safeMint(to, quantity, soulbound, percentage, daysValid, '')`.
+     * @dev Equivalent to `_safeMint(to, quantity, giftable, percentage, daysValid, '')`.
      */
-    function _safeMint(address to, uint256 quantity, bool soulbound, uint256 percentage, uint256 daysValid) internal virtual {
-        _safeMint(to, quantity, soulbound, percentage, daysValid, '');
+    function _safeMint(address to, uint256 quantity, bool giftable, uint256 percentage, uint256 daysValid) internal virtual {
+        _safeMint(to, quantity, giftable, percentage, daysValid, '');
     }
 
     // =============================================================

@@ -23,7 +23,7 @@ interface IERC721Receiver {
     ) external returns (bytes4);
 }
 
-import { IERC721Psi } from './IERC721Psi.sol';
+import { IERC721Psi } from './interfaces/IERC721Psi.sol';
 import { BitMaps } from './libs/BitMaps.sol';
 
 contract ERC721Psi is IERC721Psi {

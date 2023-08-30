@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.4;
 
-import './IERC721B.sol';
+import './interfaces/IERC721B.sol';
 
 /**
  * @dev Interface of ERC721 token receiver.
@@ -410,7 +410,7 @@ contract ERC721B is IERC721B {
         return address(uint160(_packedOwnershipOf(tokenId)));
     }
 
-    function _ownershipOf(uint256 tokenId) internal view virtual returns (TokenOwnership memory) {
+    function _ownershipOf(uint256 tokenId) internal view virtual returns (CouponInfo memory) {
         return _unpackedOwnership(_packedOwnershipOf(tokenId));
     }
 
@@ -435,7 +435,7 @@ contract ERC721B is IERC721B {
         revert UnableDetermineTokenOwner();
     }
 
-    function _unpackedOwnership(uint256 packed) private pure returns (TokenOwnership memory ownership) {
+    function _unpackedOwnership(uint256 packed) private pure returns (CouponInfo memory ownership) {
         ownership.addr = address(uint160(packed));
         ownership.startTimestamp = uint64(packed >> _BITPOS_START_TIMESTAMP);
         ownership.burned = packed & _BITMASK_BURNED != 0;

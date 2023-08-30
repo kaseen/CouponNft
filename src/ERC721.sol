@@ -3,7 +3,7 @@
 
 pragma solidity ^0.8.19;
 
-import { IERC721 } from './IERC721.sol';
+import { IERC721 } from './interfaces/IERC721.sol';
 
 interface IERC721Receiver {
     function onERC721Received(
@@ -85,6 +85,13 @@ contract ERC721 is IERC721 {
      */
     function _ownerOf(uint256 tokenId) internal view virtual returns (address) {
         return _owners[tokenId].owner;
+    }
+
+    function _ownershipOf(uint256 tokenId) internal view returns (CouponInfo memory ownership) {
+        address owner = _ownerOf(tokenId);
+        if (owner == address(0)) revert ERC721NonexistentToken(tokenId);
+
+        return _owners[tokenId];
     }
 
     /**
@@ -214,12 +221,10 @@ contract ERC721 is IERC721 {
      */
     function _transfer(address from, address to, uint256 tokenId) internal virtual {
         address owner = ownerOf(tokenId);
-        if (owner != from) {
-            revert ERC721IncorrectOwner(from, tokenId, owner);
-        }
-        if (to == address(0)) {
-            revert ERC721InvalidReceiver(address(0));
-        }
+
+        if (owner != from) revert ERC721IncorrectOwner(from, tokenId, owner);
+        if (to == address(0)) revert ERC721InvalidReceiver(address(0));
+        if (!_owners[tokenId].giftable) revert TransferNonGiftableToken();
 
         _beforeTokenTransfer(from, to, tokenId, 1);
 
@@ -375,7 +380,7 @@ contract ERC721 is IERC721 {
      */
     function _mint(
         address to,
-        bool soulbound,
+        bool giftable,
         uint256 percentage,
         uint256 daysValid
     ) internal virtual {
@@ -404,7 +409,7 @@ contract ERC721 is IERC721 {
         _owners[_currentIndex] = CouponInfo({ 
             owner: to,
             startTimestamp: uint64(block.timestamp),
-            soulbound: soulbound,
+            giftable: giftable,
             percentage: uint8(percentage),
             daysValid: uint16(daysValid)
         });

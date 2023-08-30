@@ -3,7 +3,7 @@ pragma solidity ^0.8.4;
 
 interface IERC721B {
 
-    struct TokenOwnership {
+    struct CouponInfo {
         // The address of the owner.
         address addr;
         // Stores the start time of ownership with minimal overhead for tokenomics.

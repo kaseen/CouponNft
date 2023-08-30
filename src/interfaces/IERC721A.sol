@@ -13,15 +13,15 @@ interface IERC721A {
     //                            STRUCTS
     // =============================================================
 
-    struct TokenOwnership {
+    struct CouponInfo {
         // The address of the owner.
         address addr;
         // Stores the start time of ownership with minimal overhead for tokenomics.
         uint64 startTimestamp;
         // Whether the token has been burned.
         bool burned;
-        // Whather the token is soulbound.
-        bool soulbound;
+        // Whather the token is giftable.
+        bool giftable;
         // Number representing the discount of token.
         uint8 percentage;
         // Number of days until token expire.
@@ -95,9 +95,9 @@ interface IERC721A {
     error OwnershipNotInitializedForExtraData();
 
     /**
-     * Cannot transfer soulbound token.
+     * Cannot transfer giftable token.
      */
-    error TransferSoulboundToken();
+    error TransferNonGiftableToken();
 
     /**
      * The `percentage` is bigger than 100.

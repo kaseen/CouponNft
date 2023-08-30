@@ -11,7 +11,7 @@ interface IERC721 {
     struct CouponInfo {
         address owner;
         uint64 startTimestamp;
-        bool soulbound;
+        bool giftable;
         uint8 percentage;
         uint16 daysValid;
     }
@@ -206,7 +206,7 @@ interface IERC721 {
     /**
      * Cannot transfer soulbound token.
      */
-    error TransferSoulboundToken();
+    error TransferNonGiftableToken();
 
     /**
      * The `percentage` is bigger than 100.
