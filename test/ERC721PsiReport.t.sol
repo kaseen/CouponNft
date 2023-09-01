@@ -65,6 +65,26 @@ contract ERC721PsiTest is ERC721Psi, Test {
         user1.__ERC721Psi__transferTo(address(user2), 100);
     }
 
+    function test__ERC721Psi_Burn_ID_001() public {
+        super._burn(1);
+    }
+
+    function test__ERC721Psi_Burn_ID_005() public {
+        super._burn(5);
+    }
+
+    function test__ERC721Psi_Burn_ID_010() public {
+        super._burn(10);
+    }
+
+    function test__ERC721Psi_Burn_ID_050() public {
+        super._burn(50);
+    }
+
+    function test__ERC721Psi_Burn_ID_100() public {
+        super._burn(100);
+    }
+
     /* TODO
     function test__ERC721Psi_Transfer_Initialized() public {
         user1.__ERC721Psi__transferTo(address(user2), 101);
