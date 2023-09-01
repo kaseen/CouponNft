@@ -5,7 +5,7 @@ import { ERC721B } from 'src/ERC721B.sol';
 import { User } from './User.sol';
 import 'forge-std/Test.sol';
 
-contract ERC721Test is ERC721B, Test {
+contract ERC721BTest is ERC721B /*, Test */ {
 
     constructor() ERC721B('Test', 'Test'){}
 

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import { CouponClassic } from 'src/CouponClassic.sol';
 import { ERC721 } from 'src/ERC721.sol';
 import { ERC721A } from 'src/ERC721A.sol';
-import { CouponClassic } from 'src/CouponClassic.sol';
+import { ERC721Psi } from 'src/ERC721Psi.sol';
 
 contract User {
 
@@ -38,5 +39,14 @@ contract User {
 
     function __ERC721A__operatorApproval(address to) public {
         ERC721A(testContractAddress).setApprovalForAll(to, true);
+    }
+
+    // For testing ERC721Psi
+    function __ERC721Psi__transferTo(address to, uint256 tokenId) public {
+        ERC721Psi(testContractAddress).transferFrom(address(this), to, tokenId);
+    }
+
+    function __ERC721Psi__operatorApproval(address to) public {
+        ERC721Psi(testContractAddress).setApprovalForAll(to, true);
     }
 }
