@@ -91,3 +91,54 @@ contract ERC721PsiTest is ERC721Psi, Test {
     }
     */
 }
+
+contract ERC721Burn100 is ERC721Psi, Test {
+
+    constructor() ERC721Psi('Test', 'Test'){}
+
+    uint256 constant BURNED_COUNT = 100;
+
+    function setUp() public {
+        super._mint(address(this), BURNED_COUNT + 1, false, 10, 1000);
+        for(uint i; i < BURNED_COUNT; ++i)
+            super._burn(i);
+    }
+
+    function test__burn() public {
+        super._burn(BURNED_COUNT);
+    }
+}
+
+contract ERC721Burn1000 is ERC721Psi, Test {
+
+    constructor() ERC721Psi('Test', 'Test'){}
+
+    uint256 constant BURNED_COUNT = 1000;
+
+    function setUp() public {
+        super._mint(address(this), BURNED_COUNT + 1, false, 10, 1000);
+        for(uint i; i < BURNED_COUNT; ++i)
+            super._burn(i);
+    }
+
+    function test__burn() public {
+        super._burn(BURNED_COUNT);
+    }
+}
+
+contract ERC721Burn10000 is ERC721Psi, Test {
+
+    constructor() ERC721Psi('Test', 'Test'){}
+
+    uint256 constant BURNED_COUNT = 10000;
+
+    function setUp() public {
+        super._mint(address(this), BURNED_COUNT + 1, false, 10, 1000);
+        for(uint i; i < BURNED_COUNT; ++i)
+            super._burn(i);
+    }
+
+    function test__burn() public {
+        super._burn(10000);
+    }
+}
