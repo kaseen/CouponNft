@@ -21,19 +21,19 @@ contract ERC721BTest is ERC721B /*, Test */ {
         super._mint(address(user2), 5, false, 10, 100);
     }
 
-    function test__ERC721B_Mint_1() public {
+    function test__ERC721B_Mint_001() public {
         super._mint(msg.sender, 1, false, 10, 100);
     }
 
-    function test__ERC721B_Mint_5() public {
+    function test__ERC721B_Mint_005() public {
         super._mint(msg.sender, 5, true, 10, 50);
     }
 
-    function test__ERC721B_Mint_10() public {
+    function test__ERC721B_Mint_010() public {
         super._mint(msg.sender, 10, true, 10, 50);
     }
 
-    function test__ERC721B_Mint_50() public {
+    function test__ERC721B_Mint_050() public {
         super._mint(msg.sender, 50, true, 10, 50);
     }
 

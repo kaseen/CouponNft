@@ -1,0 +1,86 @@
+Compiling 1 files with 0.8.19
+Solc 0.8.19 finished in 1.87s
+Compiler run [32msuccessful![0m
+
+Running 4 tests for test/CouponClassic.t.sol:CouponClassicTest
+[32m[PASS][0m testBurn() (gas: 18795)
+[32m[PASS][0m testMintMultiple() (gas: 1605720)
+[32m[PASS][0m testMintSingle() (gas: 273442)
+[32m[PASS][0m testTransfer() (gas: 21388)
+Test result: [32mok[0m. 4 passed; 0 failed; 0 skipped; finished in 990.26µs
+
+Running 15 tests for test/ERC721Report.t.sol:ERC721Test
+[32m[PASS][0m test__ERC721_Burn_ID_001() (gas: 10336)
+[32m[PASS][0m test__ERC721_Burn_ID_005() (gas: 10402)
+[32m[PASS][0m test__ERC721_Burn_ID_010() (gas: 10336)
+[32m[PASS][0m test__ERC721_Burn_ID_050() (gas: 10403)
+[32m[PASS][0m test__ERC721_Burn_ID_100() (gas: 10403)
+[32m[PASS][0m test__ERC721_Mint_001() (gas: 52651)
+[32m[PASS][0m test__ERC721_Mint_005() (gas: 155009)
+[32m[PASS][0m test__ERC721_Mint_010() (gas: 283089)
+[32m[PASS][0m test__ERC721_Mint_050() (gas: 1307406)
+[32m[PASS][0m test__ERC721_Mint_100() (gas: 2588053)
+[32m[PASS][0m test__ERC721_Transfer_ID_001() (gas: 48799)
+[32m[PASS][0m test__ERC721_Transfer_ID_005() (gas: 48799)
+[32m[PASS][0m test__ERC721_Transfer_ID_010() (gas: 48798)
+[32m[PASS][0m test__ERC721_Transfer_ID_050() (gas: 48731)
+[32m[PASS][0m test__ERC721_Transfer_ID_100() (gas: 48819)
+Test result: [32mok[0m. 15 passed; 0 failed; 0 skipped; finished in 4.84ms
+
+Running 15 tests for test/ERC721PsiReport.t.sol:ERC721PsiTest
+[32m[PASS][0m test__ERC721Psi_Burn_ID_001() (gas: 31823)
+[32m[PASS][0m test__ERC721Psi_Burn_ID_005() (gas: 31824)
+[32m[PASS][0m test__ERC721Psi_Burn_ID_010() (gas: 31846)
+[32m[PASS][0m test__ERC721Psi_Burn_ID_050() (gas: 31844)
+[32m[PASS][0m test__ERC721Psi_Burn_ID_100() (gas: 31823)
+[32m[PASS][0m test__ERC721Psi_Mint_1() (gas: 35181)
+[32m[PASS][0m test__ERC721Psi_Mint_10() (gas: 52831)
+[32m[PASS][0m test__ERC721Psi_Mint_100() (gas: 229770)
+[32m[PASS][0m test__ERC721Psi_Mint_5() (gas: 43002)
+[32m[PASS][0m test__ERC721Psi_Mint_50() (gas: 131536)
+[32m[PASS][0m test__ERC721Psi_Transfer_ID_001() (gas: 58385)
+[32m[PASS][0m test__ERC721Psi_Transfer_ID_005() (gas: 77975)
+[32m[PASS][0m test__ERC721Psi_Transfer_ID_010() (gas: 77921)
+[32m[PASS][0m test__ERC721Psi_Transfer_ID_050() (gas: 77976)
+[32m[PASS][0m test__ERC721Psi_Transfer_ID_100() (gas: 55301)
+Test result: [32mok[0m. 15 passed; 0 failed; 0 skipped; finished in 4.45ms
+
+Running 16 tests for test/ERC721AReport.t.sol:ERC721ATest
+[32m[PASS][0m test__ERC721A_Burn_ID_001() (gas: 61413)
+[32m[PASS][0m test__ERC721A_Burn_ID_005() (gas: 87458)
+[32m[PASS][0m test__ERC721A_Burn_ID_010() (gas: 98457)
+[32m[PASS][0m test__ERC721A_Burn_ID_050() (gas: 186456)
+[32m[PASS][0m test__ERC721A_Burn_ID_100() (gas: 276216)
+[32m[PASS][0m test__ERC721A_Mint_001() (gas: 51872)
+[32m[PASS][0m test__ERC721A_Mint_005() (gas: 59660)
+[32m[PASS][0m test__ERC721A_Mint_010() (gas: 69288)
+[32m[PASS][0m test__ERC721A_Mint_050() (gas: 146466)
+[32m[PASS][0m test__ERC721A_Mint_100() (gas: 242966)
+[32m[PASS][0m test__ERC721A_Transfer_ID_001() (gas: 72009)
+[32m[PASS][0m test__ERC721A_Transfer_ID_005() (gas: 98096)
+[32m[PASS][0m test__ERC721A_Transfer_ID_010() (gas: 109097)
+[32m[PASS][0m test__ERC721A_Transfer_ID_050() (gas: 197074)
+[32m[PASS][0m test__ERC721A_Transfer_ID_100() (gas: 286834)
+[32m[PASS][0m test__ERC721A_Transfer_Initialized() (gas: 47698)
+Test result: [32mok[0m. 16 passed; 0 failed; 0 skipped; finished in 7.90ms
+
+Running 5 tests for test/ERC721BReport.t.sol:ERC721BTest
+[32m[PASS][0m test__ERC721B_Mint_001() (gas: 29892)
+[32m[PASS][0m test__ERC721B_Mint_005() (gas: 38734)
+[32m[PASS][0m test__ERC721B_Mint_010() (gas: 49672)
+[32m[PASS][0m test__ERC721B_Mint_050() (gas: 137938)
+[32m[PASS][0m test__ERC721B_Mint_100() (gas: 248232)
+Test result: [32mok[0m. 5 passed; 0 failed; 0 skipped; finished in 637.06µs
+
+Running 1 test for test/ERC721PsiReport.t.sol:ERC721Burn100
+[32m[PASS][0m test__burn() (gas: 14701)
+Test result: [32mok[0m. 1 passed; 0 failed; 0 skipped; finished in 5.11ms
+
+Running 1 test for test/ERC721PsiReport.t.sol:ERC721Burn1000
+[32m[PASS][0m test__burn() (gas: 21448)
+Test result: [32mok[0m. 1 passed; 0 failed; 0 skipped; finished in 25.12ms
+
+Running 1 test for test/ERC721PsiReport.t.sol:ERC721Burn10000
+[32m[PASS][0m test__burn() (gas: 102556)
+Test result: [32mok[0m. 1 passed; 0 failed; 0 skipped; finished in 453.68ms
+Ran 8 test suites: 58 tests passed, 0 failed, 0 skipped (58 total tests)
