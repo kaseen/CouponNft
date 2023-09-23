@@ -509,6 +509,7 @@ contract ERC721Psi is IERC721Psi {
 
         uint256 subsequentTokenId = tokenId + 1;
 
+        // If subsequent token id is 0 and within limit, save information about original owner
         if(!_batchHead.get(subsequentTokenId) &&  
             subsequentTokenId < _nextTokenId()
         ) {
@@ -524,7 +525,7 @@ contract ERC721Psi is IERC721Psi {
         }
         _owners[tokenId] = result;
 
-        
+        // If id being transferred have 0 in BitMap i.e. is not head of the batch
         if(tokenId != tokenIdBatchHead) {
             _batchHead.set(tokenId);
         }

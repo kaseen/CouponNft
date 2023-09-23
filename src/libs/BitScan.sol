@@ -30,45 +30,11 @@ library BitScan {
     } 
 
     /**
-        @dev Isolate the most significant set bit.
-     */ 
-    function isolateMS1B256(uint256 bb) pure internal returns (uint256) {
-        require(bb > 0);
-        unchecked {
-            bb |= bb >> 128;
-            bb |= bb >> 64;
-            bb |= bb >> 32;
-            bb |= bb >> 16;
-            bb |= bb >> 8;
-            bb |= bb >> 4;
-            bb |= bb >> 2;
-            bb |= bb >> 1;
-            
-            return (bb >> 1) + 1;
-        }
-    } 
-
-    /**
         @dev Find the index of the lest significant set bit. (trailing zero count)
      */ 
     function bitScanForward256(uint256 bb) pure internal returns (uint8) {
         unchecked {
             return uint8(LOOKUP_TABLE_256[(isolateLS1B256(bb) * DEBRUIJN_256) >> 248]);
         }   
-    }
-
-    /**
-        @dev Find the index of the most significant set bit.
-     */ 
-    function bitScanReverse256(uint256 bb) pure internal returns (uint8) {
-        unchecked {
-            return 255 - uint8(LOOKUP_TABLE_256[((isolateMS1B256(bb) * DEBRUIJN_256) >> 248)]);
-        }   
-    }
-
-    function log2(uint256 bb) pure internal returns (uint8) {
-        unchecked {
-            return uint8(LOOKUP_TABLE_256[(isolateMS1B256(bb) * DEBRUIJN_256) >> 248]);
-        } 
     }
 }

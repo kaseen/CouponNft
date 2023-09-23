@@ -14,7 +14,6 @@
 pragma solidity ^0.8.0;
 
 import "./BitScan.sol";
-import "./Popcount.sol";
 
 /**
  * @dev This Library is a modified version of Openzeppelin's BitMaps library with extra features.
@@ -50,20 +49,6 @@ library BitMaps {
         return bitmap._data[bucket] & mask != 0;
     }
 
-    /**
-     * @dev Sets the bit at `index` to the boolean `value`.
-     */
-    function setTo(
-        BitMap storage bitmap,
-        uint256 index,
-        bool value
-    ) internal {
-        if (value) {
-            set(bitmap, index);
-        } else {
-            unset(bitmap, index);
-        }
-    }
 
     /**
      * @dev Sets the bit at `index`.
@@ -72,135 +57,6 @@ library BitMaps {
         uint256 bucket = index >> 8;
         uint256 mask = MASK_INDEX_ZERO >> (index & 0xff);
         bitmap._data[bucket] |= mask;
-    }
-
-    /**
-     * @dev Unsets the bit at `index`.
-     */
-    function unset(BitMap storage bitmap, uint256 index) internal {
-        uint256 bucket = index >> 8;
-        uint256 mask = MASK_INDEX_ZERO >> (index & 0xff);
-        bitmap._data[bucket] &= ~mask;
-    }
-
-
-    /**
-     * @dev Consecutively sets `amount` of bits starting from the bit at `startIndex`.
-     */    
-    function setBatch(BitMap storage bitmap, uint256 startIndex, uint256 amount) internal {
-        uint256 bucket = startIndex >> 8;
-
-        uint256 bucketStartIndex = (startIndex & 0xff);
-
-        unchecked {
-            if(bucketStartIndex + amount < 256) {
-                bitmap._data[bucket] |= MASK_FULL << (256 - amount) >> bucketStartIndex;
-            } else {
-                bitmap._data[bucket] |= MASK_FULL >> bucketStartIndex;
-                amount -= (256 - bucketStartIndex);
-                bucket++;
-
-                while(amount > 256) {
-                    bitmap._data[bucket] = MASK_FULL;
-                    amount -= 256;
-                    bucket++;
-                }
-
-                bitmap._data[bucket] |= MASK_FULL << (256 - amount);
-            }
-        }
-    }
-
-
-    /**
-     * @dev Consecutively unsets `amount` of bits starting from the bit at `startIndex`.
-     */    
-    function unsetBatch(BitMap storage bitmap, uint256 startIndex, uint256 amount) internal {
-        uint256 bucket = startIndex >> 8;
-
-        uint256 bucketStartIndex = (startIndex & 0xff);
-
-        unchecked {
-            if(bucketStartIndex + amount < 256) {
-                bitmap._data[bucket] &= ~(MASK_FULL << (256 - amount) >> bucketStartIndex);
-            } else {
-                bitmap._data[bucket] &= ~(MASK_FULL >> bucketStartIndex);
-                amount -= (256 - bucketStartIndex);
-                bucket++;
-
-                while(amount > 256) {
-                    bitmap._data[bucket] = 0;
-                    amount -= 256;
-                    bucket++;
-                }
-
-                bitmap._data[bucket] &= ~(MASK_FULL << (256 - amount));
-            }
-        }
-    }
-
-    /**
-     * @dev Returns number of set bits within a range.
-     */
-    function popcountA(BitMap storage bitmap, uint256 startIndex, uint256 amount) internal view returns(uint256 count) {
-        uint256 bucket = startIndex >> 8;
-
-        uint256 bucketStartIndex = (startIndex & 0xff);
-
-        unchecked {
-            if(bucketStartIndex + amount < 256) {
-                count +=  Popcount.popcount256A(
-                    bitmap._data[bucket] << bucketStartIndex >> (256 - amount)
-                );
-            } else {
-                count += Popcount.popcount256A(
-                    bitmap._data[bucket] << bucketStartIndex
-                );
-                amount -= (256 - bucketStartIndex);
-                bucket++;
-
-                while(amount > 256) {
-                    count += Popcount.popcount256A(bitmap._data[bucket]);
-                    amount -= 256;
-                    bucket++;
-                }
-                count += Popcount.popcount256A(
-                    bitmap._data[bucket] >> (256 - amount)
-                );
-            }
-        }
-    }
-
-    /**
-     * @dev Returns number of set bits within a range.
-     */
-    function popcountB(BitMap storage bitmap, uint256 startIndex, uint256 amount) internal view returns(uint256 count) {
-        uint256 bucket = startIndex >> 8;
-
-        uint256 bucketStartIndex = (startIndex & 0xff);
-
-        unchecked {
-            if(bucketStartIndex + amount < 256) {
-                count +=  Popcount.popcount256B(
-                    bitmap._data[bucket] << bucketStartIndex >> (256 - amount)
-                );
-            } else {
-                count += Popcount.popcount256B(
-                    bitmap._data[bucket] << bucketStartIndex
-                );
-                amount -= (256 - bucketStartIndex);
-                bucket++;
-
-                while(amount > 256) {
-                    count += Popcount.popcount256B(bitmap._data[bucket]);
-                    amount -= 256;
-                    bucket++;
-                }
-                count += Popcount.popcount256B(
-                    bitmap._data[bucket] >> (256 - amount)
-                );
-            }
-        }
     }
 
 
