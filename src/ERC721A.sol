@@ -343,14 +343,24 @@ contract ERC721A is IERC721A {
     }
 
     /**
+     * If n is a label for the distance between current token id and the head of a batch,
+     * price of this function can be calculated as:
+     * 
+     * (n+2)*2100+(n+3)*100,    when n>=1
+     * 2500                     when n=0
+     * 
+     * where the first addend in the sum is number of SLOAD insructions and the second
+     * addend is approximated gas cost of all instructions inside function body
+     */
+    /**
      * Returns the packed ownership data of `tokenId`.
      */
     function _packedOwnershipOf(uint256 tokenId) private view returns (uint256 packed) {
         if (_startTokenId() <= tokenId) {
-            packed = _packedOwnerships[tokenId];
+            packed = _packedOwnerships[tokenId];                                                    // SLOAD
             // If the data at the starting slot does not exist, start the scan.
             if (packed == 0) {
-                if (tokenId >= _currentIndex) _revert(OwnerQueryForNonexistentToken.selector);
+                if (tokenId >= _currentIndex) _revert(OwnerQueryForNonexistentToken.selector);      // SLOAD
                 // Invariant:
                 // There will always be an initialized ownership slot
                 // (i.e. `ownership.addr != address(0) && ownership.burned == false`)
@@ -362,7 +372,7 @@ contract ERC721A is IERC721A {
                 // If the address is zero, packed will be zero.
                 for (;;) {
                     unchecked {
-                        packed = _packedOwnerships[--tokenId];
+                        packed = _packedOwnerships[--tokenId];                                      // SLOAD
                     }
                     if (packed == 0) continue;
                     if (packed & _BITMASK_BURNED == 0) return packed;
