@@ -239,15 +239,15 @@ contract ERC721 is IERC721 {
 
         // Decrease balance with checked arithmetic, because an `ownerOf` override may
         // invalidate the assumption that `_balances[from] >= 1`.
-        _balances[from] -= 1;
+        _balances[from] -= 1;                                               // cold SSTORE(2) if balances !=1, otherwise SSTORE(3)
 
         unchecked {
             // `_balances[to]` could overflow in the conditions described in `_mint`. That would require
             // all 2**256 token ids to be minted, which in practice is impossible.
-            _balances[to] += 1;
+            _balances[to] += 1;                                             // cold SSTORE(2) if balances !=0, otherwise cold SSTORE(1)
         }
 
-        _owners[tokenId].owner = to;
+        _owners[tokenId].owner = to;                                        // warm SSTORE(2)
 
         emit Transfer(from, to, tokenId);
 
@@ -403,10 +403,10 @@ contract ERC721 is IERC721 {
             // Given that tokens are minted one by one, it is impossible in practice that
             // this ever happens. Might change if we allow batch minting.
             // The ERC fails to describe this case.
-            _balances[to] += 1;
+            _balances[to] += 1;                                             // cold SSTORE(2) if balances !=0, otherwise SSTORE(1)
         }
 
-        _owners[_currentIndex] = CouponInfo({ 
+        _owners[_currentIndex] = CouponInfo({                               // cold SSTORE(1)
             owner: to,
             startTimestamp: uint64(block.timestamp),
             giftable: giftable,
@@ -486,9 +486,9 @@ contract ERC721 is IERC721 {
 
         // Decrease balance with checked arithmetic, because an `ownerOf` override may
         // invalidate the assumption that `_balances[from] >= 1`.
-        _balances[owner] -= 1;
+        _balances[owner] -= 1;                                              // cold SSTORE(2) if balances !=1, otherwise SSTORE(3)
 
-        delete _owners[tokenId];
+        delete _owners[tokenId];                                            // SSTORE(3)
 
         emit Transfer(owner, address(0), tokenId);
 

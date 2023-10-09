@@ -5,22 +5,25 @@ import { ERC721 } from 'src/ERC721.sol';
 import { User } from './User.sol';
 import 'forge-std/Test.sol';
 
+import 'forge-std/console.sol';
+
 contract ERC721Test is ERC721, Test {
 
     constructor() ERC721('Test', 'Test'){}
 
     User public user1;
     User public user2;
+    User public user3;
 
     function setUp() public {
         user1 = new User(address(this));
         user2 = new User(address(this));
+        user3 = new User(address(this));
 
         // Setup
-        super._mint(address(this), true, 10, 100);      // Mint ID 0
-        mintMultipleForUser(address(user1), 10000);
-
-        user1.__ERC721__operatorApproval(address(user2));
+        super._mint(address(user1), true, 10, 100);
+        super._mint(address(user1), true, 10, 100);
+        super._mint(address(user2), true, 10, 100);
     }
 
     function mintMultipleForUser(address user, uint256 amount) private {
@@ -72,91 +75,27 @@ contract ERC721Test is ERC721, Test {
         mintMultipleForUser(msg.sender, 10000);
     }
 
-    function test__ERC721_Transfer_ID_00001() public {
-        user1.__ERC721__transferTo(address(user2), 1);
+    function test__ERC721_Transfer_Scenario1_SSTORE3_SSTORE2() public {
+        user2.__ERC721__transferTo(address(user1), 2);
     }
 
-    function test__ERC721_Transfer_ID_00005() public {
-        user1.__ERC721__transferTo(address(user2), 5);
+    function test__ERC721_Transfer_Scenario2_SSTORE2_SSTORE2() public {
+        user1.__ERC721__transferTo(address(user2), 0);
     }
 
-    function test__ERC721_Transfer_ID_00010() public {
-        user1.__ERC721__transferTo(address(user2), 10);
-    }
-    
-    function test__ERC721_Transfer_ID_00050() public {
-        user1.__ERC721__transferTo(address(user2), 50);
+    function test__ERC721_Transfer_Scenario3_SSTORE3_SSTORE1() public {
+        user2.__ERC721__transferTo(address(user3), 2);
     }
 
-    function test__ERC721_Transfer_ID_00100() public {
-        user1.__ERC721__transferTo(address(user2), 100);
+    function test__ERC721_Transfer_Scenario4_SSTORE2_SSTORE1() public {
+        user1.__ERC721__transferTo(address(user3), 0);
     }
 
-    function test__ERC721_Transfer_ID_00200() public {
-        user1.__ERC721__transferTo(address(user2), 200);
+    function test__ERC721_Burn_Scenario1() public {
+        super._burn(2);
     }
 
-    function test__ERC721_Transfer_ID_00500() public {
-        user1.__ERC721__transferTo(address(user2), 500);
-    }
-
-    function test__ERC721_Transfer_ID_01000() public {
-        user1.__ERC721__transferTo(address(user2), 1000);
-    }
-
-    function test__ERC721_Transfer_ID_02000() public {
-        user1.__ERC721__transferTo(address(user2), 2000);
-    }
-
-    function test__ERC721_Transfer_ID_05000() public {
-        user1.__ERC721__transferTo(address(user2), 5000);
-    }
-
-    function test__ERC721_Transfer_ID_10000() public {
-        user1.__ERC721__transferTo(address(user2), 10000);
-    }
-
-    function test__ERC721_Burn_ID_00001() public {
+    function test__ERC721_Burn_Scenario2() public {
         super._burn(1);
-    }
-
-    function test__ERC721_Burn_ID_00005() public {
-        super._burn(5);
-    }
-
-    function test__ERC721_Burn_ID_00010() public {
-        super._burn(10);
-    }
-
-    function test__ERC721_Burn_ID_00050() public {
-        super._burn(50);
-    }
-
-    function test__ERC721_Burn_ID_00100() public {
-        super._burn(100);
-    }
-
-    function test__ERC721_Burn_ID_00200() public {
-        super._burn(200);
-    }
-
-    function test__ERC721_Burn_ID_00500() public {
-        super._burn(500);
-    }
-
-    function test__ERC721_Burn_ID_01000() public {
-        super._burn(1000);
-    }
-
-    function test__ERC721_Burn_ID_02000() public {
-        super._burn(2000);
-    }
-
-    function test__ERC721_Burn_ID_05000() public {
-        super._burn(5000);
-    }
-
-    function test__ERC721_Burn_ID_10000() public {
-        super._burn(10000);
     }
 }
