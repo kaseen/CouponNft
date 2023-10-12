@@ -70,7 +70,7 @@ library BitMaps {
         uint256 bucketIndex = (index & 0xff);
 
         // load a bitboard from the bitmap.
-        uint256 bb = bitmap._data[bucket];
+        uint256 bb = bitmap._data[bucket];                                          // cold SLOAD
 
         // offset the bitboard to scan from `bucketIndex`.
         bb = bb >> (0xff ^ bucketIndex); // bb >> (255 - bucketIndex)
@@ -80,13 +80,13 @@ library BitMaps {
                 setBitIndex = (bucket << 8) | (bucketIndex -  bb.bitScanForward256());    
             }
         } else {
-            while(true) {
+            while(true) {   // Each iteration in loop costs 2294 gas without SLOAD
                 require(bucket > 0, "BitMaps: The set bit before the index doesn't exist.");
                 unchecked {
                     bucket--;
                 }
                 // No offset. Always scan from the least significiant bit now.
-                bb = bitmap._data[bucket];
+                bb = bitmap._data[bucket];                                          // cold SLOAD
                 
                 if(bb > 0) {
                     unchecked {

@@ -163,9 +163,9 @@ contract ERC721Psi is IERC721Psi {
         internal
         view
         returns (uint256 packedOwnership, uint256 tokenIdBatchHead) {
-        require(_exists(tokenId), "ERC721Psi: owner query for nonexistent token");
+        require(_exists(tokenId), "ERC721Psi: owner query for nonexistent token");  // 2 * cold SLOAD, with burnable extension
         tokenIdBatchHead = _getBatchHead(tokenId);
-        packedOwnership = _owners[tokenIdBatchHead];
+        packedOwnership = _owners[tokenIdBatchHead];                                // cold SLOAD
     }
 
     function _ownershipOf(uint256 tokenId) internal view returns (CouponInfo memory ownership) {
@@ -513,7 +513,7 @@ contract ERC721Psi is IERC721Psi {
         if(!_batchHead.get(subsequentTokenId) &&  
             subsequentTokenId < _nextTokenId()
         ) {
-            _owners[subsequentTokenId] = previousOwnershipInfo;
+            _owners[subsequentTokenId] = previousOwnershipInfo;                     // cold SSTORE
             _batchHead.set(subsequentTokenId);
         }
 
@@ -584,6 +584,15 @@ contract ERC721Psi is IERC721Psi {
         }
     }
 
+    /**
+     * If n is a label for the distance between current token id and the head of a batch,
+     * price of this function can be calculated as:
+     * 
+     * (n/256+1)*2100+(n/256*194)+500
+     * 
+     * where the first addend in the sum is number of SLOAD insructions, second and third
+     * addends are approximated gas cost of all instructions inside function body
+     */
     function _getBatchHead(uint256 tokenId) internal view returns (uint256 tokenIdBatchHead) {
         tokenIdBatchHead = _batchHead.scanForward(tokenId); 
     }
@@ -732,10 +741,10 @@ contract ERC721Psi is IERC721Psi {
      * and stop existing when they are burned (`_burn`).
      */
     function _exists(uint256 tokenId) internal view virtual returns (bool){
-        if(_burnedToken.get(tokenId)) {
+        if(_burnedToken.get(tokenId)) {                                             // cold SLOAD
             return false;
         } 
-        return tokenId < _nextTokenId() && _startTokenId() <= tokenId;
+        return tokenId < _nextTokenId() && _startTokenId() <= tokenId;              // cold SLOAD
     }
 
     /**

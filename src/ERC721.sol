@@ -87,7 +87,7 @@ contract ERC721 is IERC721 {
         return _owners[tokenId].owner;
     }
 
-    function _ownershipOf(uint256 tokenId) internal view returns (CouponInfo memory ownership) {
+    function _getCouponInfo(uint256 tokenId) internal view returns (CouponInfo memory) {
         address owner = _ownerOf(tokenId);
         if (owner == address(0)) revert ERC721NonexistentToken(tokenId);
 
@@ -239,7 +239,7 @@ contract ERC721 is IERC721 {
 
         // Decrease balance with checked arithmetic, because an `ownerOf` override may
         // invalidate the assumption that `_balances[from] >= 1`.
-        _balances[from] -= 1;                                               // cold SSTORE(2) if balances !=1, otherwise SSTORE(3)
+        _balances[from] -= 1;                                               // cold SSTORE(2) if balances !=1, otherwise refund
 
         unchecked {
             // `_balances[to]` could overflow in the conditions described in `_mint`. That would require
@@ -486,9 +486,9 @@ contract ERC721 is IERC721 {
 
         // Decrease balance with checked arithmetic, because an `ownerOf` override may
         // invalidate the assumption that `_balances[from] >= 1`.
-        _balances[owner] -= 1;                                              // cold SSTORE(2) if balances !=1, otherwise SSTORE(3)
+        _balances[owner] -= 1;                                              // cold SSTORE(2) if balances !=1, otherwise refund
 
-        delete _owners[tokenId];                                            // SSTORE(3)
+        delete _owners[tokenId];                                            // Refund
 
         emit Transfer(owner, address(0), tokenId);
 
