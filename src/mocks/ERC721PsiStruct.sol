@@ -23,8 +23,8 @@ interface IERC721Receiver {
     ) external returns (bytes4);
 }
 
-import { IERC721Psi } from './interfaces/IERC721Psi.sol';
-import { BitMaps } from './libs/BitMaps.sol';
+import { IERC721Psi } from '../interfaces/IERC721Psi.sol';
+import { BitMaps } from '../libs/BitMaps.sol';
 
 contract ERC721Psi is IERC721Psi {
 
@@ -57,7 +57,7 @@ contract ERC721Psi is IERC721Psi {
     string private _symbol;
 
     // Mapping from token ID to owner address
-    mapping(uint256 => uint256) internal _owners;
+    mapping(uint256 => CouponInfo) internal _owners;
     uint256 private _currentIndex;
 
     mapping(uint256 => address) private _tokenApprovals;
@@ -155,28 +155,22 @@ contract ERC721Psi is IERC721Psi {
         override
         returns (address)
     {
-        (uint256 packedOwnership, ) = _packedOwnershipAndBatchHeadOf(tokenId);
-        return address(uint160(packedOwnership));
+        (CouponInfo memory couponInfo, ) = _couponInfoAndBatchHeadOf(tokenId);
+        return couponInfo.owner;
     }
 
-    function _packedOwnershipAndBatchHeadOf(uint256 tokenId)
+    function _couponInfoAndBatchHeadOf(uint256 tokenId)
         internal
         view
-        returns (uint256 packedOwnership, uint256 tokenIdBatchHead) {
+        returns (CouponInfo memory packedOwnership, uint256 tokenIdBatchHead) {
         require(_exists(tokenId), "ERC721Psi: owner query for nonexistent token");  // 2 * cold SLOAD, with burnable extension
         tokenIdBatchHead = _getBatchHead(tokenId);
         packedOwnership = _owners[tokenIdBatchHead];                                // cold SLOAD
     }
 
-    function _ownershipOf(uint256 tokenId) internal view returns (CouponInfo memory ownership) {
+    function _getCouponInfo(uint256 tokenId) internal view returns (CouponInfo memory) {
         uint256 tokenIdBatchHead = _getBatchHead(tokenId);
-        uint256 packedOwnership = _owners[tokenIdBatchHead];
-
-        ownership.owner = address(uint160(packedOwnership));
-        ownership.startTimestamp = uint64(packedOwnership >> _BITPOS_START_TIMESTAMP);
-        ownership.giftable = packedOwnership & _BITMASK_GIFTABLE != 0;
-        ownership.percentage = uint8(packedOwnership >> _BITPOS_PERCENTAGE);
-        ownership.daysValid = uint16(packedOwnership >> _BITPOS_DAYS_VALID);
+        return _owners[tokenIdBatchHead];
     }
 
 
@@ -429,15 +423,13 @@ contract ERC721Psi is IERC721Psi {
         _beforeTokenTransfers(address(0), to, nextTokenId, quantity);
         _currentIndex += quantity;
 
-        uint256 result;
-        assembly {
-            result := and(to, _BITMASK_ADDRESS)
-            result := or(result, shl(_BITPOS_START_TIMESTAMP, timestamp()))
-            result := or(result, shl(_BITPOS_GIFTABLE, giftable))
-            result := or(result, shl(_BITPOS_PERCENTAGE, percentage))
-            result := or(result, shl(_BITPOS_DAYS_VALID, daysValid))
-        }
-        _owners[nextTokenId] = result;
+        _owners[nextTokenId] = CouponInfo({
+            owner: to,
+            startTimestamp: uint64(block.timestamp),
+            giftable: giftable,
+            percentage: uint8(percentage),
+            daysValid: uint16(daysValid)
+        });
 
         _batchHead.set(nextTokenId);
 
@@ -494,10 +486,10 @@ contract ERC721Psi is IERC721Psi {
         address to,
         uint256 tokenId
     ) internal virtual {
-        (uint256 previousOwnershipInfo, uint256 tokenIdBatchHead) = _packedOwnershipAndBatchHeadOf(tokenId);
+        (CouponInfo memory couponInfo, uint256 tokenIdBatchHead) = _couponInfoAndBatchHeadOf(tokenId);
 
         require(
-            address(uint160(previousOwnershipInfo)) == from,
+            couponInfo.owner == from,
             "ERC721Psi: transfer of token that is not own"
         );
         require(to != address(0), "ERC721Psi: transfer to the zero address");
@@ -513,17 +505,11 @@ contract ERC721Psi is IERC721Psi {
         if(!_batchHead.get(subsequentTokenId) &&  
             subsequentTokenId < _nextTokenId()
         ) {
-            _owners[subsequentTokenId] = previousOwnershipInfo;                     // cold SSTORE
+            _owners[subsequentTokenId] = couponInfo;                     // cold SSTORE
             _batchHead.set(subsequentTokenId);
         }
 
-        // Change address to from in packedOwnershipInfo and save in _owners mapping new owner
-        uint256 result;
-        assembly {
-            result := and(to, _BITMASK_ADDRESS)
-            result := or(result, shl(_BITPOS_START_TIMESTAMP, shr(_BITPOS_START_TIMESTAMP, previousOwnershipInfo)))
-        }
-        _owners[tokenId] = result;
+        _owners[tokenId].owner = to;
 
         // If id being transferred have 0 in BitMap i.e. is not head of the batch
         if(tokenId != tokenIdBatchHead) {
