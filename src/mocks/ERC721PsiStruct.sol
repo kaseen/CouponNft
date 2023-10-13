@@ -31,24 +31,6 @@ contract ERC721Psi is IERC721Psi {
     // The mask of the lower 160 bits for addresses.
     uint256 private constant _BITMASK_ADDRESS = (1 << 160) - 1;
 
-    // The bit mask of the `burned` bit in packed ownership.
-    uint256 private constant _BITMASK_BURNED = 1 << 224;
-
-    // The bit mask of the `giftable` bit in packed ownership.
-    uint256 private constant _BITMASK_GIFTABLE = 1 << 226;
-
-    // The bit position of `startTimestamp` in packed ownership.
-    uint256 private constant _BITPOS_START_TIMESTAMP = 160;
-
-    // The bit position of the `giftable` bit in packed ownership.
-    uint256 private constant _BITPOS_GIFTABLE = 226;
-
-    // The bit position of `percentage` in packed ownership.
-    uint256 private constant _BITPOS_PERCENTAGE = 232;
-
-    // The bit position of `daysValid` in packed ownership.
-    uint256 private constant _BITPOS_DAYS_VALID = 240;
-
     using BitMaps for BitMaps.BitMap;
 
     BitMaps.BitMap private _batchHead;

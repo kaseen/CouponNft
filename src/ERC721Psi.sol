@@ -31,9 +31,6 @@ contract ERC721Psi is IERC721Psi {
     // The mask of the lower 160 bits for addresses.
     uint256 private constant _BITMASK_ADDRESS = (1 << 160) - 1;
 
-    // The bit mask of the `burned` bit in packed ownership.
-    uint256 private constant _BITMASK_BURNED = 1 << 224;
-
     // The bit mask of the `giftable` bit in packed ownership.
     uint256 private constant _BITMASK_GIFTABLE = 1 << 226;
 
