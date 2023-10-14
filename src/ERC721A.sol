@@ -346,7 +346,7 @@ contract ERC721A is IERC721A {
      * If n is a label for the distance between current token id and the head of a batch,
      * price of this function can be calculated as:
      * 
-     * (n+2)*2100+(n+3)*100,    when n>=1
+     * (n+2)*2100+(n+4)*100,    when n>=1
      * 2500                     when n=0
      * 
      * where the first addend in the sum is number of SLOAD insructions and the second
@@ -357,10 +357,10 @@ contract ERC721A is IERC721A {
      */
     function _packedOwnershipOf(uint256 tokenId) private view returns (uint256 packed) {
         if (_startTokenId() <= tokenId) {
-            packed = _packedOwnerships[tokenId];                                                    // SLOAD
+            packed = _packedOwnerships[tokenId];                                                    // cold SLOAD
             // If the data at the starting slot does not exist, start the scan.
             if (packed == 0) {
-                if (tokenId >= _currentIndex) _revert(OwnerQueryForNonexistentToken.selector);      // SLOAD
+                if (tokenId >= _currentIndex) _revert(OwnerQueryForNonexistentToken.selector);      // cold SLOAD
                 // Invariant:
                 // There will always be an initialized ownership slot
                 // (i.e. `ownership.addr != address(0) && ownership.burned == false`)
@@ -372,7 +372,7 @@ contract ERC721A is IERC721A {
                 // If the address is zero, packed will be zero.
                 for (;;) {
                     unchecked {
-                        packed = _packedOwnerships[--tokenId];                                      // SLOAD
+                        packed = _packedOwnerships[--tokenId];                                      // cold SLOAD
                     }
                     if (packed == 0) continue;
                     if (packed & _BITMASK_BURNED == 0) return packed;
@@ -643,8 +643,8 @@ contract ERC721A is IERC721A {
         // Counter overflow is incredibly unrealistic as `tokenId` would have to be 2**256.
         unchecked {
             // We can directly increment and decrement the balances.
-            --_packedAddressData[from]; // Updates: `balance -= 1`.
-            ++_packedAddressData[to]; // Updates: `balance += 1`.
+            --_packedAddressData[from]; // Updates: `balance -= 1`.                                                 // cold SSTORE(2)
+            ++_packedAddressData[to]; // Updates: `balance += 1`.                                                   // cold SSTORE(2), if balance is 0 cold SSTORE(1)
 
             // Updates:
             // - `address` to the next owner.
@@ -653,7 +653,7 @@ contract ERC721A is IERC721A {
             // - `percentage` to percentage field of tokenId.
             // - `daysValid` to daysValid field of tokenId.
             // - `nextInitialized` to `true`.
-            _packedOwnerships[tokenId] = _packTransferData(to, prevOwnershipPacked) | _BITMASK_NEXT_INITIALIZED;
+            _packedOwnerships[tokenId] = _packTransferData(to, prevOwnershipPacked) | _BITMASK_NEXT_INITIALIZED;    // warm SSTORE(2)
 
             // If the next slot may not have been initialized (i.e. `nextInitialized == false`) .
             if (prevOwnershipPacked & _BITMASK_NEXT_INITIALIZED == 0) {
@@ -663,7 +663,7 @@ contract ERC721A is IERC721A {
                     // If the next slot is within bounds.
                     if (nextTokenId != _currentIndex) {
                         // Initialize the next slot to maintain correctness for `ownerOf(tokenId + 1)`.
-                        _packedOwnerships[nextTokenId] = prevOwnershipPacked;
+                        _packedOwnerships[nextTokenId] = prevOwnershipPacked;                                       // cold SSTORE(1)
                     }
                 }
             }
@@ -824,7 +824,7 @@ contract ERC721A is IERC721A {
         uint256 percentage,
         uint256 daysValid
     ) internal virtual {
-        uint256 startTokenId = _currentIndex;
+        uint256 startTokenId = _currentIndex;                                           // cold SLOAD
         if (quantity == 0) _revert(MintZeroQuantity.selector);
 
         // Revert if percentage > 100
@@ -844,7 +844,7 @@ contract ERC721A is IERC721A {
             // - `startTimestamp` to the timestamp of minting.
             // - `burned` to `false`.
             // - `nextInitialized` to `quantity == 1`.
-            _packedOwnerships[startTokenId] = _packOwnershipData(
+            _packedOwnerships[startTokenId] = _packOwnershipData(                       // cold SSTORE(1)
                 to,
                 _nextInitializedFlag(quantity) |
                 _giftableFlag(giftable) |
@@ -857,7 +857,7 @@ contract ERC721A is IERC721A {
             // - `numberMinted += quantity`.
             //
             // We can directly add to the `balance` and `numberMinted`.
-            _packedAddressData[to] += quantity * ((1 << _BITPOS_NUMBER_MINTED) | 1);
+            _packedAddressData[to] += quantity * ((1 << _BITPOS_NUMBER_MINTED) | 1);    // cold SSTORE(2), if balance is 0 cold SSTORE(1)
 
             // Mask `to` to the lower 160 bits, in case the upper bits somehow aren't clean.
             uint256 toMasked = uint256(uint160(to)) & _BITMASK_ADDRESS;
@@ -883,7 +883,8 @@ contract ERC721A is IERC721A {
                 // that overflows uint256 will make the loop run out of gas.
             } while (++tokenId != end);
 
-            _currentIndex = end;
+            // Total cost of moving index is same as cold SSTORE(1)
+            _currentIndex = end;                                                        // warm SSTORE(2), if index is 0 warm SSTORE(1)
         }
         _afterTokenTransfers(address(0), to, startTokenId, quantity);
     }
@@ -987,7 +988,7 @@ contract ERC721A is IERC721A {
             //
             // We can directly decrement the balance, and increment the number burned.
             // This is equivalent to `packed -= 1; packed += 1 << _BITPOS_NUMBER_BURNED;`.
-            _packedAddressData[from] += (1 << _BITPOS_NUMBER_BURNED) - 1;
+            _packedAddressData[from] += (1 << _BITPOS_NUMBER_BURNED) - 1;                               // cold SSTORE(2)
 
 
             // Updates:
@@ -997,7 +998,7 @@ contract ERC721A is IERC721A {
             // - `daysValid` to daysValid field of tokenId.
             // - `burned` to `true`.
             // - `nextInitialized` to `true`.
-            _packedOwnerships[tokenId] = _packOwnershipData(
+            _packedOwnerships[tokenId] = _packOwnershipData(                                            // warm SSTORE(2)
                 from, 
                 (_BITMASK_BURNED | _BITMASK_NEXT_INITIALIZED) |  prevOwnershipPacked
             );
@@ -1010,7 +1011,7 @@ contract ERC721A is IERC721A {
                     // If the next slot is within bounds.
                     if (nextTokenId != _currentIndex) {
                         // Initialize the next slot to maintain correctness for `ownerOf(tokenId + 1)`.
-                        _packedOwnerships[nextTokenId] = prevOwnershipPacked;
+                        _packedOwnerships[nextTokenId] = prevOwnershipPacked;                           // cold SSTORE(1)
                     }
                 }
             }

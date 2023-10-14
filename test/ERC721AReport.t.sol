@@ -17,7 +17,7 @@ contract ERC721ATest is ERC721A, Test {
         user2 = new User(address(this));
 
         // Setup
-        super._mint(address(this), 1, false, 10, 1000);     // Mint ID 0
+        super._mint(address(this), 1, false, 10, 1000);         // Bypass warm SSTORE(1) for currentIndex
         super._mint(address(user1), 10000, true, 10, 100);
         super._mint(address(user1), 1, true, 10, 100);
 
