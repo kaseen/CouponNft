@@ -644,7 +644,7 @@ contract ERC721A is IERC721A {
         unchecked {
             // We can directly increment and decrement the balances.
             --_packedAddressData[from]; // Updates: `balance -= 1`.                                                 // cold SSTORE(2)
-            ++_packedAddressData[to]; // Updates: `balance += 1`.                                                   // cold SSTORE(2), if balance is 0 cold SSTORE(1)
+            ++_packedAddressData[to]; // Updates: `balance += 1`.                                                   // cold SSTORE(2), if balance is 0 SSTORE(1)
 
             // Updates:
             // - `address` to the next owner.
@@ -653,7 +653,7 @@ contract ERC721A is IERC721A {
             // - `percentage` to percentage field of tokenId.
             // - `daysValid` to daysValid field of tokenId.
             // - `nextInitialized` to `true`.
-            _packedOwnerships[tokenId] = _packTransferData(to, prevOwnershipPacked) | _BITMASK_NEXT_INITIALIZED;    // warm SSTORE(2)
+            _packedOwnerships[tokenId] = _packTransferData(to, prevOwnershipPacked) | _BITMASK_NEXT_INITIALIZED;    // warm SSTORE(1), if id is batch head warm SSTORE(2)
 
             // If the next slot may not have been initialized (i.e. `nextInitialized == false`) .
             if (prevOwnershipPacked & _BITMASK_NEXT_INITIALIZED == 0) {
@@ -857,7 +857,7 @@ contract ERC721A is IERC721A {
             // - `numberMinted += quantity`.
             //
             // We can directly add to the `balance` and `numberMinted`.
-            _packedAddressData[to] += quantity * ((1 << _BITPOS_NUMBER_MINTED) | 1);    // cold SSTORE(2), if balance is 0 cold SSTORE(1)
+            _packedAddressData[to] += quantity * ((1 << _BITPOS_NUMBER_MINTED) | 1);    // cold SSTORE(2), if balance is 0 SSTORE(1)
 
             // Mask `to` to the lower 160 bits, in case the upper bits somehow aren't clean.
             uint256 toMasked = uint256(uint160(to)) & _BITMASK_ADDRESS;
@@ -884,7 +884,7 @@ contract ERC721A is IERC721A {
             } while (++tokenId != end);
 
             // Total cost of moving index is same as cold SSTORE(1)
-            _currentIndex = end;                                                        // warm SSTORE(2), if index is 0 warm SSTORE(1)
+            _currentIndex = end;                                                        // warm SSTORE(2), if index is 0 SSTORE(1)
         }
         _afterTokenTransfers(address(0), to, startTokenId, quantity);
     }

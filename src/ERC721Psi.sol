@@ -114,29 +114,6 @@ contract ERC721Psi is IERC721Psi {
             interfaceId == 0x5b5e139f;      // ERC165 interface ID for ERC721Metadata
     }
 
-    /**
-     * @dev See {IERC721-balanceOf}.
-     */
-    function balanceOf(address owner) 
-        public 
-        view 
-        virtual 
-        override 
-        returns (uint) 
-    {
-        require(owner != address(0), "ERC721Psi: balance query for the zero address");
-
-        uint count;
-        for( uint i = _startTokenId(); i < _nextTokenId(); ++i ){
-            if(_exists(i)){
-                if( owner == ownerOf(i)){
-                    ++count;
-                }
-            }
-        }
-        return count;
-    }
-
 
     // =============================================================
     //                     OWNERSHIPS OPERATIONS
@@ -416,7 +393,7 @@ contract ERC721Psi is IERC721Psi {
         uint256 percentage,
         uint256 daysValid
     ) internal virtual {
-        uint256 nextTokenId = _nextTokenId();
+        uint256 nextTokenId = _nextTokenId();                                       // cold SLOAD
 
         require(quantity > 0, "ERC721Psi: quantity must be greater 0");
         require(to != address(0), "ERC721Psi: mint to the zero address");
@@ -424,7 +401,7 @@ contract ERC721Psi is IERC721Psi {
         require(daysValid > 0 && daysValid < 65536, "ERC721Psi: invalid days");
 
         _beforeTokenTransfers(address(0), to, nextTokenId, quantity);
-        _currentIndex += quantity;
+        _currentIndex += quantity;                                                  // warm SSTORE(2), if index is 0 warm SSTORE(1)
 
         uint256 result;
         assembly {
@@ -434,9 +411,9 @@ contract ERC721Psi is IERC721Psi {
             result := or(result, shl(_BITPOS_PERCENTAGE, percentage))
             result := or(result, shl(_BITPOS_DAYS_VALID, daysValid))
         }
-        _owners[nextTokenId] = result;
+        _owners[nextTokenId] = result;                                              // cold SSTORE(1)
 
-        _batchHead.set(nextTokenId);
+        _batchHead.set(nextTokenId);                                                // cold SSTORE(2), if bucket is empty cold SSTORE(1) 
 
         uint256 toMasked;
         uint256 end = nextTokenId + quantity;
@@ -508,10 +485,10 @@ contract ERC721Psi is IERC721Psi {
 
         // If subsequent token id is 0 and within limit, save information about original owner
         if(!_batchHead.get(subsequentTokenId) &&  
-            subsequentTokenId < _nextTokenId()
+            subsequentTokenId < _nextTokenId()                                      // warm SLOAD
         ) {
-            _owners[subsequentTokenId] = previousOwnershipInfo;                     // cold SSTORE
-            _batchHead.set(subsequentTokenId);
+            _owners[subsequentTokenId] = previousOwnershipInfo;                     // cold SSTORE(1)
+            _batchHead.set(subsequentTokenId);                                      // warm SSTORE(2), if bukcet is empty warm SSTORE(1)
         }
 
         // Change address to from in packedOwnershipInfo and save in _owners mapping new owner
@@ -520,11 +497,11 @@ contract ERC721Psi is IERC721Psi {
             result := and(to, _BITMASK_ADDRESS)
             result := or(result, shl(_BITPOS_START_TIMESTAMP, shr(_BITPOS_START_TIMESTAMP, previousOwnershipInfo)))
         }
-        _owners[tokenId] = result;
+        _owners[tokenId] = result;                                                  // cold SSTORE(1), if id is batch head warm SSTORE(2)
 
         // If id being transferred have 0 in BitMap i.e. is not head of the batch
         if(tokenId != tokenIdBatchHead) {
-            _batchHead.set(tokenId);
+            _batchHead.set(tokenId);                                                // warm SSTORE(3), if id is in end of bucket warm SSTORE(2)
         }
 
         emit Transfer(from, to, tokenId);
@@ -637,25 +614,6 @@ contract ERC721Psi is IERC721Psi {
         uint256 quantity
     ) internal virtual {}
 
-    /**
-     * @dev Hook that is called after a set of serially-ordered token ids have been transferred. This includes
-     * minting.
-     *
-     * startTokenId - the first token id to be transferred
-     * quantity - the amount to be transferred
-     *
-     * Calling conditions:
-     *
-     * - when `from` and `to` are both non-zero.
-     * - `from` and `to` are never both zero.
-     */
-    function _afterTokenTransfers(
-        address from,
-        address to,
-        uint256 startTokenId,
-        uint256 quantity
-    ) internal virtual {}
-
     function _toString(uint256 value) internal pure virtual returns (string memory str) {
         assembly {
             // The maximum value of a uint256 contains 78 digits (1 byte per digit), but
@@ -701,6 +659,65 @@ contract ERC721Psi is IERC721Psi {
 
     function isContract(address account) internal view returns (bool) {
         return account.code.length > 0;
+    }
+
+    // =============================================================
+    //                    ADDRESS DATA EXTENSION
+    // =============================================================
+
+    // Mapping owner address to address data
+    mapping(address => AddressData) _addressData;
+
+    /**
+     * @dev See {IERC721-balanceOf}.
+     */
+    function balanceOf(address owner) 
+        public 
+        view 
+        virtual 
+        override 
+        returns (uint) 
+    {
+        require(owner != address(0), "ERC721Psi: balance query for the zero address");
+        return uint256(_addressData[owner].balance);   
+    }
+
+    /**
+     * @dev Hook that is called after a set of serially-ordered token ids have been transferred. This includes
+     * minting.
+     *
+     * startTokenId - the first token id to be transferred
+     * quantity - the amount to be transferred
+     *
+     * Calling conditions:
+     *
+     * - when `from` and `to` are both non-zero.
+     * - `from` and `to` are never both zero.
+     */
+    function _afterTokenTransfers(
+        address from,
+        address to,
+        uint256 /* startTokenId */,
+        uint256 quantity
+    ) internal virtual {
+        require(quantity < 2 ** 64);
+        uint64 _quantity = uint64(quantity);
+
+        // On transfer and burn
+        if(from != address(0)){
+            _addressData[from].balance -= _quantity;                                // cold SSTORE(2)
+        } else {
+            // On mint
+            _addressData[to].numberMinted += _quantity;                             // cold SSTORE(2), if balance is 0 SSTORE(1)
+        }
+
+        // On transfer and mint
+        if(to != address(0)){
+            _addressData[to].balance += _quantity;                                  // cold SSTORE(2), if balance is 0 SSTORE(1)
+        } else {
+            // On burn
+            _addressData[from].numberBurned += _quantity;                           // cold SSTORE(2), if balance is 0 SSTORE(1)
+        }
     }
 
     // =============================================================

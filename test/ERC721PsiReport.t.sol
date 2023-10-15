@@ -17,7 +17,7 @@ contract ERC721PsiTest is ERC721Psi, Test {
         user2 = new User(address(this));
 
         // Setup
-        super._mint(address(this), 1, false, 10, 1000);     // Mint ID 0
+        super._mint(address(this), 1, false, 10, 100);          // Bypass warm SSTORE(1) for currentIndex
         super._mint(address(user1), 10000, true, 10, 100);
 
         user1.__ERC721Psi__operatorApproval(address(user2));
