@@ -32,13 +32,13 @@ contract ERC721Psi is IERC721Psi {
     uint256 private constant _BITMASK_ADDRESS = (1 << 160) - 1;
 
     // The bit mask of the `giftable` bit in packed ownership.
-    uint256 private constant _BITMASK_GIFTABLE = 1 << 226;
+    uint256 private constant _BITMASK_GIFTABLE = 1 << 224;
 
     // The bit position of `startTimestamp` in packed ownership.
     uint256 private constant _BITPOS_START_TIMESTAMP = 160;
 
     // The bit position of the `giftable` bit in packed ownership.
-    uint256 private constant _BITPOS_GIFTABLE = 226;
+    uint256 private constant _BITPOS_GIFTABLE = 224;
 
     // The bit position of `percentage` in packed ownership.
     uint256 private constant _BITPOS_PERCENTAGE = 232;
@@ -488,7 +488,7 @@ contract ERC721Psi is IERC721Psi {
             subsequentTokenId < _nextTokenId()                                      // warm SLOAD
         ) {
             _owners[subsequentTokenId] = previousOwnershipInfo;                     // cold SSTORE(1)
-            _batchHead.set(subsequentTokenId);                                      // warm SSTORE(2), if bukcet is empty warm SSTORE(1)
+            _batchHead.set(subsequentTokenId);                                      // warm SSTORE(2), if bucket is empty warm SSTORE(1)
         }
 
         // Change address to from in packedOwnershipInfo and save in _owners mapping new owner

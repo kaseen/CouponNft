@@ -99,29 +99,6 @@ contract ERC721Psi is IERC721Psi {
             interfaceId == 0x5b5e139f;      // ERC165 interface ID for ERC721Metadata
     }
 
-    /**
-     * @dev See {IERC721-balanceOf}.
-     */
-    function balanceOf(address owner) 
-        public 
-        view 
-        virtual 
-        override 
-        returns (uint) 
-    {
-        require(owner != address(0), "ERC721Psi: balance query for the zero address");
-
-        uint count;
-        for( uint i = _startTokenId(); i < _nextTokenId(); ++i ){
-            if(_exists(i)){
-                if( owner == ownerOf(i)){
-                    ++count;
-                }
-            }
-        }
-        return count;
-    }
-
 
     // =============================================================
     //                     OWNERSHIPS OPERATIONS
@@ -608,25 +585,6 @@ contract ERC721Psi is IERC721Psi {
         uint256 quantity
     ) internal virtual {}
 
-    /**
-     * @dev Hook that is called after a set of serially-ordered token ids have been transferred. This includes
-     * minting.
-     *
-     * startTokenId - the first token id to be transferred
-     * quantity - the amount to be transferred
-     *
-     * Calling conditions:
-     *
-     * - when `from` and `to` are both non-zero.
-     * - `from` and `to` are never both zero.
-     */
-    function _afterTokenTransfers(
-        address from,
-        address to,
-        uint256 startTokenId,
-        uint256 quantity
-    ) internal virtual {}
-
     function _toString(uint256 value) internal pure virtual returns (string memory str) {
         assembly {
             // The maximum value of a uint256 contains 78 digits (1 byte per digit), but
@@ -672,6 +630,65 @@ contract ERC721Psi is IERC721Psi {
 
     function isContract(address account) internal view returns (bool) {
         return account.code.length > 0;
+    }
+
+    // =============================================================
+    //                    ADDRESS DATA EXTENSION
+    // =============================================================
+
+    // Mapping owner address to address data
+    mapping(address => AddressData) _addressData;
+
+    /**
+     * @dev See {IERC721-balanceOf}.
+     */
+    function balanceOf(address owner) 
+        public 
+        view 
+        virtual 
+        override 
+        returns (uint) 
+    {
+        require(owner != address(0), "ERC721Psi: balance query for the zero address");
+        return uint256(_addressData[owner].balance);   
+    }
+
+    /**
+     * @dev Hook that is called after a set of serially-ordered token ids have been transferred. This includes
+     * minting.
+     *
+     * startTokenId - the first token id to be transferred
+     * quantity - the amount to be transferred
+     *
+     * Calling conditions:
+     *
+     * - when `from` and `to` are both non-zero.
+     * - `from` and `to` are never both zero.
+     */
+    function _afterTokenTransfers(
+        address from,
+        address to,
+        uint256 /* startTokenId */,
+        uint256 quantity
+    ) internal virtual {
+        require(quantity < 2 ** 64);
+        uint64 _quantity = uint64(quantity);
+
+        // On transfer and burn
+        if(from != address(0)){
+            _addressData[from].balance -= _quantity;                                // cold SSTORE(2)
+        } else {
+            // On mint
+            _addressData[to].numberMinted += _quantity;                             // cold SSTORE(2), if balance is 0 SSTORE(1)
+        }
+
+        // On transfer and mint
+        if(to != address(0)){
+            _addressData[to].balance += _quantity;                                  // cold SSTORE(2), if balance is 0 SSTORE(1)
+        } else {
+            // On burn
+            _addressData[from].numberBurned += _quantity;                           // cold SSTORE(2), if balance is 0 SSTORE(1)
+        }
     }
 
     // =============================================================
