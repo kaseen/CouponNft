@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import { CouponClassic } from 'src/CouponClassic.sol';
+import { NeonCoupon } from 'src/NeonCoupon.sol';
 import { ERC721 } from 'src/ERC721.sol';
 import { ERC721A } from 'src/ERC721A.sol';
 import { ERC721Psi } from 'src/ERC721Psi.sol';
@@ -14,13 +14,13 @@ contract User {
         testContractAddress = addr;
     }
 
-    // For testing CouponClassic
-    function __Classic__transferTo(address to, address couponAddress) public {
-        CouponClassic(couponAddress).changeOwnerTo(to);
+    // For testing NeonCoupon
+    function __NeonCoupon__transferTo(address to, address couponAddress) public {
+        NeonCoupon(couponAddress).changeOwnerTo(to);
     }
 
-    function __Classic__burn(address couponAddress) public {
-        CouponClassic(couponAddress).redeem();
+    function __NeonCoupon__burn(address couponAddress) public {
+        NeonCoupon(couponAddress).redeem();
     }
 
     // For testing ERC721

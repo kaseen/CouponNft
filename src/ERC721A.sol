@@ -346,11 +346,11 @@ contract ERC721A is IERC721A {
      * If n is a label for the distance between current token id and the head of a batch,
      * price of this function can be calculated as:
      * 
-     * (n+2)*2100+(n+4)*100,    when n>=1
-     * 2500                     when n=0
+     * (n+2)*2100+(n+4)*141,    when n>=1
      * 
      * where the first addend in the sum is number of SLOAD insructions and the second
-     * addend is approximated gas cost of all instructions inside function body
+     * addend is approximated gas cost of all instructions inside function body.
+     * Formula applies when optimizer is disabled!
      */
     /**
      * Returns the packed ownership data of `tokenId`.
