@@ -13,7 +13,7 @@ interface IERC721 {
         uint64 startTimestamp;
         bool giftable;
         uint8 percentage;
-        uint16 daysValid;
+        uint16 numOfBlocks;
     }
 
     /**
@@ -214,7 +214,12 @@ interface IERC721 {
     error MintInvalidPercentage();
 
     /**
-     * The `daysValid` is bigger than 2**16 - 1.
+     * The `numOfBlocks` is bigger than 2**16 - 1.
      */
-    error MintInvalidDays();
+    error MintInvalidNumOfBlocks();
+
+    /**
+     * Reverted when the coupon has expired.
+     */
+    error CouponExpired();
 }

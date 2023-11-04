@@ -5,15 +5,19 @@ import { ERC721 } from 'src/ERC721.sol';
 import { User } from './User.sol';
 import 'forge-std/Test.sol';
 
-import 'forge-std/console.sol';
-
 contract ERC721Test is ERC721, Test {
-
-    constructor() ERC721('Test', 'Test'){}
 
     User public user1;
     User public user2;
     User public user3;
+    uint256 oneDay = 86400;
+
+    constructor() ERC721('Test', 'Test', oneDay) {}
+
+    function mintMultipleForUser(address user, uint256 amount) private {
+        for(uint256 i; i < amount; ++i)
+            super._mint(user, block.timestamp, true, 10, 50);
+    }
 
     function setUp() public {
         user1 = new User(address(this));
@@ -21,14 +25,9 @@ contract ERC721Test is ERC721, Test {
         user3 = new User(address(this));
 
         // Setup
-        super._mint(address(user1), true, 10, 100);
-        super._mint(address(user1), true, 10, 100);
-        super._mint(address(user2), true, 10, 100);
-    }
-
-    function mintMultipleForUser(address user, uint256 amount) private {
-        for(uint256 i; i < amount; ++i)
-            super._mint(user, true, 10, 50);
+        super._mint(address(user1), block.timestamp, true, 10, 100);
+        super._mint(address(user1), block.timestamp, true, 10, 100);
+        super._mint(address(user2), block.timestamp, true, 10, 100);
     }
 
     function test__ERC721_Mint_00001() public {

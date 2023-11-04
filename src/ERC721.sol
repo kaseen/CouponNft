@@ -30,6 +30,9 @@ contract ERC721 is IERC721 {
     // Token symbol
     string private _symbol;
 
+    // Time blocks
+    uint256 immutable _BLOCK_DURATION;
+
     // Mapping from token ID to owner address
     mapping(uint256 => CouponInfo) private _owners;
 
@@ -45,9 +48,10 @@ contract ERC721 is IERC721 {
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
      */
-    constructor(string memory name_, string memory symbol_) {
+    constructor(string memory name_, string memory symbol_, uint256 _blockDuration) {
         _name = name_;
         _symbol = symbol_;
+        _BLOCK_DURATION = _blockDuration;
         _currentIndex = _startTokenId();
     }
 
@@ -380,9 +384,10 @@ contract ERC721 is IERC721 {
      */
     function _mint(
         address to,
+        uint256 startTimestamp,
         bool giftable,
         uint256 percentage,
-        uint256 daysValid
+        uint256 numOfBlocks
     ) internal virtual {
         // Revert if minting to zero address
         if(to == address(0))
@@ -392,9 +397,9 @@ contract ERC721 is IERC721 {
         if(percentage > 100 || percentage == 0)
             revert MintInvalidPercentage();
 
-        // Revert if daysValid > 2**16 - 1
-        if(daysValid > 65535 || daysValid == 0)
-            revert MintInvalidDays();
+        // Revert if numOfBlocks > 2**16 - 1
+        if(numOfBlocks > 65535 || numOfBlocks == 0)
+            revert MintInvalidNumOfBlocks();
 
         _beforeTokenTransfer(address(0), to, _currentIndex, 1);
 
@@ -408,10 +413,10 @@ contract ERC721 is IERC721 {
 
         _owners[_currentIndex] = CouponInfo({                               // cold SSTORE(1)
             owner: to,
-            startTimestamp: uint64(block.timestamp),
+            startTimestamp: uint64(startTimestamp),
             giftable: giftable,
             percentage: uint8(percentage),
-            daysValid: uint16(daysValid)
+            numOfBlocks: uint16(numOfBlocks)
         });
 
         emit Transfer(address(0), to, _currentIndex);
@@ -433,11 +438,12 @@ contract ERC721 is IERC721 {
      */
     function _safeMint(
         address to,
-        bool soulbound,
+        uint256 startTimestamp,
+        bool giftable,
         uint256 percentage,
-        uint256 daysValid
+        uint256 numOfBlocks
     ) internal virtual {
-        _safeMint(to, soulbound, percentage, daysValid, '');
+        _safeMint(to, startTimestamp, giftable, percentage, numOfBlocks, '');
     }
 
     /**
@@ -446,13 +452,13 @@ contract ERC721 is IERC721 {
      */
     function _safeMint(
         address to,
-        bool soulbound,
+        uint256 startTimestamp,
+        bool giftable,
         uint256 percentage,
-        uint256 daysValid,
+        uint256 numOfBlocks,
         bytes memory data
     ) internal virtual {
-        _mint(to, soulbound, percentage, daysValid);
-        // TODO: Test checkOnERC721Received
+        _mint(to, startTimestamp, giftable, percentage, numOfBlocks);
         if (!_checkOnERC721Received(address(0), to, _currentIndex-1, data)) {
             revert ERC721InvalidReceiver(to);
         }
@@ -475,6 +481,11 @@ contract ERC721 is IERC721 {
      */
     function _burn(uint256 tokenId) internal virtual {
         address owner = ownerOf(tokenId);
+
+        // Revert if coupon expired
+        CouponInfo memory coupon = _owners[tokenId];
+        if(coupon.startTimestamp + coupon.numOfBlocks * _BLOCK_DURATION < block.timestamp)
+            revert CouponExpired();
 
         _beforeTokenTransfer(owner, address(0), tokenId, 1);
 
