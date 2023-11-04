@@ -24,8 +24,8 @@ interface IERC721A {
         bool giftable;
         // Number representing the discount of token.
         uint8 percentage;
-        // Number of days until token expire.
-        uint16 daysValid;
+        // Number of blocks until token expire.
+        uint16 numOfBlocks;
     }
 
     /**
@@ -95,7 +95,7 @@ interface IERC721A {
     error OwnershipNotInitializedForExtraData();
 
     /**
-     * Cannot transfer giftable token.
+     * Cannot transfer non-giftable token.
      */
     error TransferNonGiftableToken();
 
@@ -105,9 +105,14 @@ interface IERC721A {
     error MintInvalidPercentage();
 
     /**
-     * The `daysValid` is bigger than 2**16 - 1.
+     * The `numOfBlocks` is bigger than 2**16 - 1.
      */
-    error MintInvalidDays();
+    error MintInvalidNumOfBlocks();
+
+    /**
+     * Reverted when the coupon has expired.
+     */
+    error CouponExpired();
 
     // =============================================================
     //                         TOKEN COUNTERS

@@ -204,7 +204,7 @@ interface IERC721 {
     error ERC721InvalidOperator(address operator);
 
     /**
-     * Cannot transfer soulbound token.
+     * Cannot transfer non-giftable token.
      */
     error TransferNonGiftableToken();
 

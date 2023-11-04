@@ -79,8 +79,8 @@ contract ERC721A is IERC721A {
     // The bit position of `percentage` in packed ownership.
     uint256 private constant _BITPOS_PERCENTAGE = 232;
 
-    // The bit position of `daysValid` in packed ownership.
-    uint256 private constant _BITPOS_DAYS_VALID = 240;
+    // The bit position of `numOfBlocks` in packed ownership.
+    uint256 private constant _BITPOS_NUM_OF_BLOCKS = 240;
 
     // The mask of the lower 160 bits for addresses.
     uint256 private constant _BITMASK_ADDRESS = (1 << 160) - 1;
@@ -106,6 +106,9 @@ contract ERC721A is IERC721A {
     // Token symbol
     string private _symbol;
 
+    // Time blocks
+    uint256 immutable _BLOCK_DURATION;
+
     // Mapping from token ID to ownership details
     // An empty struct value does not necessarily mean the token is unowned.
     // See {_packedOwnershipOf} implementation for details.
@@ -117,7 +120,7 @@ contract ERC721A is IERC721A {
     // - [225]        `nextInitialized`
     // - [226]        `giftable`
     // - [232..239]   `percentage`
-    // - [240..255]   `daysValid`
+    // - [240..255]   `numOfBlocks`
     mapping(uint256 => uint256) private _packedOwnerships;
 
     // Mapping owner address to address data.
@@ -139,9 +142,10 @@ contract ERC721A is IERC721A {
     //                          CONSTRUCTOR
     // =============================================================
 
-    constructor(string memory name_, string memory symbol_) {
+    constructor(string memory name_, string memory symbol_, uint256 _blockDuration) {
         _name = name_;
         _symbol = symbol_;
+        _BLOCK_DURATION = _blockDuration;
         _currentIndex = _startTokenId();
     }
 
@@ -400,7 +404,7 @@ contract ERC721A is IERC721A {
         ownership.burned = packed & _BITMASK_BURNED != 0;
         ownership.giftable = packed & _BITMASK_GIFTABLE != 0;
         ownership.percentage = uint8(packed >> _BITPOS_PERCENTAGE);
-        ownership.daysValid = uint16(packed >> _BITPOS_DAYS_VALID);
+        ownership.numOfBlocks = uint16(packed >> _BITPOS_NUM_OF_BLOCKS);
     }
 
     /**
@@ -412,19 +416,6 @@ contract ERC721A is IERC721A {
             owner := and(owner, _BITMASK_ADDRESS)
             // `owner | (block.timestamp << _BITPOS_START_TIMESTAMP) | flags`.
             result := or(owner, or(shl(_BITPOS_START_TIMESTAMP, timestamp()), flags))
-        }
-    }
-
-    /**
-     * @dev Packs ownership data into a single uint256.
-     */
-    function _packTransferData(address owner, uint256 prevOwnershippacked) private pure returns (uint256 result) {
-        uint96 _previousData = uint96(prevOwnershippacked >> _BITPOS_START_TIMESTAMP);
-        assembly {
-            // Mask `owner` to the lower 160 bits, in case the upper bits somehow aren't clean.
-            owner := and(owner, _BITMASK_ADDRESS)
-            // `owner | (_previousData << _BITPOS_START_TIMESTAMP)`.
-            result := or(owner, shl(_BITPOS_START_TIMESTAMP, _previousData))
         }
     }
 
@@ -644,16 +635,16 @@ contract ERC721A is IERC721A {
         unchecked {
             // We can directly increment and decrement the balances.
             --_packedAddressData[from]; // Updates: `balance -= 1`.                                                 // cold SSTORE(2)
-            ++_packedAddressData[to]; // Updates: `balance += 1`.                                                   // cold SSTORE(2), if balance is 0 SSTORE(1)
+            ++_packedAddressData[to]; // Updates: `balance += 1`.                                                   // cold SSTORE(2), if balance is 0 SSTORE(1)  
 
-            // Updates:
-            // - `address` to the next owner.
-            // - `startTimestamp` to the timestamp of tokenId.
-            // - `burned` to burn flag of tokenId.
-            // - `percentage` to percentage field of tokenId.
-            // - `daysValid` to daysValid field of tokenId.
-            // - `nextInitialized` to `true`.
-            _packedOwnerships[tokenId] = _packTransferData(to, prevOwnershipPacked) | _BITMASK_NEXT_INITIALIZED;    // warm SSTORE(1), if id is batch head warm SSTORE(2)
+            // Change address to from in packedOwnershipInfo and save in _packedOwnerships mapping new owner
+            uint256 result;
+            assembly {
+                result := and(to, _BITMASK_ADDRESS)
+                result := or(result, _BITMASK_NEXT_INITIALIZED)
+                result := or(result, shl(_BITPOS_START_TIMESTAMP, shr(_BITPOS_START_TIMESTAMP, prevOwnershipPacked)))
+            }
+            _packedOwnerships[tokenId] = result;                                                                    // warm SSTORE(1), if id is batch head warm SSTORE(2)
 
             // If the next slot may not have been initialized (i.e. `nextInitialized == false`) .
             if (prevOwnershipPacked & _BITMASK_NEXT_INITIALIZED == 0) {
@@ -820,9 +811,10 @@ contract ERC721A is IERC721A {
     function _mint(
         address to,
         uint256 quantity,
+        uint256 startTimestamp,
         bool giftable,
         uint256 percentage,
-        uint256 daysValid
+        uint256 numOfBlocks
     ) internal virtual {
         uint256 startTokenId = _currentIndex;                                           // cold SLOAD
         if (quantity == 0) _revert(MintZeroQuantity.selector);
@@ -830,8 +822,8 @@ contract ERC721A is IERC721A {
         // Revert if percentage > 100
         if(percentage > 100 || percentage == 0) _revert(MintInvalidPercentage.selector);
 
-        // Revert if daysValid > 2**16 - 1
-        if(daysValid > 65535 || daysValid == 0) _revert(MintInvalidDays.selector);
+        // Revert if numOfBlocks > 2**16 - 1
+        if(numOfBlocks > 65535 || numOfBlocks == 0) _revert(MintInvalidNumOfBlocks.selector);
 
         _beforeTokenTransfers(address(0), to, startTokenId, quantity);
 
@@ -839,18 +831,17 @@ contract ERC721A is IERC721A {
         // `balance` and `numberMinted` have a maximum limit of 2**64.
         // `tokenId` has a maximum limit of 2**256.
         unchecked {
-            // Updates:
-            // - `address` to the owner.
-            // - `startTimestamp` to the timestamp of minting.
-            // - `burned` to `false`.
-            // - `nextInitialized` to `quantity == 1`.
-            _packedOwnerships[startTokenId] = _packOwnershipData(                       // cold SSTORE(1)
-                to,
-                _nextInitializedFlag(quantity) |
-                _giftableFlag(giftable) |
-                percentage << _BITPOS_PERCENTAGE |
-                daysValid << _BITPOS_DAYS_VALID
-            );
+
+            uint256 result;
+            assembly {
+                result := and(to, _BITMASK_ADDRESS)
+                result := or(result, shl(_BITPOS_START_TIMESTAMP, startTimestamp))
+                result := or(result, shl(_BITPOS_NEXT_INITIALIZED, eq(quantity, 1)))
+                result := or(result, shl(_BITPOS_GIFTABLE, giftable))
+                result := or(result, shl(_BITPOS_PERCENTAGE, percentage))
+                result := or(result, shl(_BITPOS_NUM_OF_BLOCKS, numOfBlocks))
+            }
+            _packedOwnerships[startTokenId ] = result;                                  // cold SSTORE(1)
 
             // Updates:
             // - `balance += quantity`.
@@ -905,12 +896,13 @@ contract ERC721A is IERC721A {
     function _safeMint(
         address to,
         uint256 quantity,
+        uint256 startTimestamp,
         bool giftable,
         uint256 percentage,
-        uint256 daysValid,
+        uint256 numOfBlocks,
         bytes memory _data
     ) internal virtual {
-        _mint(to, quantity, giftable, percentage, daysValid);
+        _mint(to, quantity, startTimestamp, giftable, percentage, numOfBlocks);
 
         unchecked {
             if (to.code.length != 0) {
@@ -928,10 +920,17 @@ contract ERC721A is IERC721A {
     }
 
     /**
-     * @dev Equivalent to `_safeMint(to, quantity, giftable, percentage, daysValid, '')`.
+     * @dev Equivalent to `_safeMint(to, quantity, giftable, percentage, numOfBlocks, '')`.
      */
-    function _safeMint(address to, uint256 quantity, bool giftable, uint256 percentage, uint256 daysValid) internal virtual {
-        _safeMint(to, quantity, giftable, percentage, daysValid, '');
+    function _safeMint(
+        address to,
+        uint256 quantity,
+        uint256 startTimestamp,
+        bool giftable,
+        uint256 percentage,
+        uint256 numOfBlocks
+    ) internal virtual {
+        _safeMint(to, quantity, startTimestamp, giftable, percentage, numOfBlocks, '');
     }
 
     // =============================================================
@@ -958,17 +957,19 @@ contract ERC721A is IERC721A {
     function _burn(uint256 tokenId, bool approvalCheck) internal virtual {
         uint256 prevOwnershipPacked = _packedOwnershipOf(tokenId);
 
-        address from = address(uint160(prevOwnershipPacked));
+        CouponInfo memory coupon = _unpackedOwnership(prevOwnershipPacked);
+        if(coupon.startTimestamp + coupon.numOfBlocks * _BLOCK_DURATION < block.timestamp)
+            _revert(CouponExpired.selector);
 
         (uint256 approvedAddressSlot, address approvedAddress) = _getApprovedSlotAndAddress(tokenId);
 
         if (approvalCheck) {
             // The nested ifs save around 20+ gas over a compound boolean condition.
-            if (!_isSenderApprovedOrOwner(approvedAddress, from, _msgSenderERC721A()))
-                if (!isApprovedForAll(from, _msgSenderERC721A())) _revert(TransferCallerNotOwnerNorApproved.selector);
+            if (!_isSenderApprovedOrOwner(approvedAddress, coupon.addr, _msgSenderERC721A()))
+                if (!isApprovedForAll(coupon.addr, _msgSenderERC721A())) _revert(TransferCallerNotOwnerNorApproved.selector);
         }
 
-        _beforeTokenTransfers(from, address(0), tokenId, 1);
+        _beforeTokenTransfers(coupon.addr, address(0), tokenId, 1);
 
         // Clear approvals from the previous owner.
         assembly {
@@ -988,20 +989,19 @@ contract ERC721A is IERC721A {
             //
             // We can directly decrement the balance, and increment the number burned.
             // This is equivalent to `packed -= 1; packed += 1 << _BITPOS_NUMBER_BURNED;`.
-            _packedAddressData[from] += (1 << _BITPOS_NUMBER_BURNED) - 1;                               // cold SSTORE(2)
-
+            _packedAddressData[coupon.addr] += (1 << _BITPOS_NUMBER_BURNED) - 1;                        // cold SSTORE(2)
 
             // Updates:
             // - `address` to the next owner.
             // - `startTimestamp` to the timestamp of burning.
             // - `percentage` to percentage field of tokenId.
-            // - `daysValid` to daysValid field of tokenId.
+            // - `numOfBlocks` to numOfBlocks field of tokenId.
             // - `burned` to `true`.
             // - `nextInitialized` to `true`.
             _packedOwnerships[tokenId] = _packOwnershipData(                                            // warm SSTORE(2)
-                from, 
+                coupon.addr, 
                 (_BITMASK_BURNED | _BITMASK_NEXT_INITIALIZED) |  prevOwnershipPacked
-            );
+            ); 
 
             // If the next slot may not have been initialized (i.e. `nextInitialized == false`) .
             if (prevOwnershipPacked & _BITMASK_NEXT_INITIALIZED == 0) {
@@ -1017,8 +1017,8 @@ contract ERC721A is IERC721A {
             }
         }
 
-        emit Transfer(from, address(0), tokenId);
-        _afterTokenTransfers(from, address(0), tokenId, 1);
+        emit Transfer(coupon.addr, address(0), tokenId);
+        _afterTokenTransfers(coupon.addr, address(0), tokenId, 1);
 
         // Overflow not possible, as _burnCounter cannot be exceed _currentIndex times.
         unchecked {
