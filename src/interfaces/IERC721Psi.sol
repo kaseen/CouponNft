@@ -27,7 +27,7 @@ interface IERC721Psi {
         uint64 startTimestamp;
         bool giftable;
         uint8 percentage;
-        uint16 daysValid;
+        uint16 numOfBlocks;
     }
 
     /**

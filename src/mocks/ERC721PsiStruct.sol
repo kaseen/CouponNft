@@ -31,12 +31,30 @@ contract ERC721Psi is IERC721Psi {
     // The mask of the lower 160 bits for addresses.
     uint256 private constant _BITMASK_ADDRESS = (1 << 160) - 1;
 
+    // The bit mask of the `giftable` bit in packed ownership.
+    uint256 private constant _BITMASK_GIFTABLE = 1 << 224;
+
+    // The bit position of `startTimestamp` in packed ownership.
+    uint256 private constant _BITPOS_START_TIMESTAMP = 160;
+
+    // The bit position of the `giftable` bit in packed ownership.
+    uint256 private constant _BITPOS_GIFTABLE = 224;
+
+    // The bit position of `percentage` in packed ownership.
+    uint256 private constant _BITPOS_PERCENTAGE = 232;
+
+    // The bit position of `numOfBlocks` in packed ownership.
+    uint256 private constant _BITPOS_NUM_OF_BLOCKS = 240;
+
     using BitMaps for BitMaps.BitMap;
 
     BitMaps.BitMap private _batchHead;
 
     string private _name;
     string private _symbol;
+
+    // Time blocks
+    uint256 immutable _BLOCK_DURATION;
 
     // Mapping from token ID to owner address
     mapping(uint256 => CouponInfo) internal _owners;
@@ -53,9 +71,10 @@ contract ERC721Psi is IERC721Psi {
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
      */
-    constructor(string memory name_, string memory symbol_) {
+    constructor(string memory name_, string memory symbol_, uint256 _blockDuration) {
         _name = name_;
         _symbol = symbol_;
+        _BLOCK_DURATION = _blockDuration;
         _currentIndex = _startTokenId();
     }
 
@@ -81,7 +100,6 @@ contract ERC721Psi is IERC721Psi {
     function _totalMinted() internal view virtual returns (uint256) {
         return _currentIndex - _startTokenId();
     }
-
 
     /**
      * @dev See {IERC165-supportsInterface}.
@@ -121,13 +139,14 @@ contract ERC721Psi is IERC721Psi {
     function _couponInfoAndBatchHeadOf(uint256 tokenId)
         internal
         view
-        returns (CouponInfo memory packedOwnership, uint256 tokenIdBatchHead) {
+        returns (CouponInfo memory couponInfo, uint256 tokenIdBatchHead) {
         require(_exists(tokenId), "ERC721Psi: owner query for nonexistent token");  // 2 * cold SLOAD, with burnable extension
         tokenIdBatchHead = _getBatchHead(tokenId);
-        packedOwnership = _owners[tokenIdBatchHead];                                // cold SLOAD
+        couponInfo = _owners[tokenIdBatchHead];                                // cold SLOAD
     }
 
     function _getCouponInfo(uint256 tokenId) internal view returns (CouponInfo memory) {
+        require(_exists(tokenId), "ERC721Psi: owner query for nonexistent token");  // 2 * cold SLOAD, with burnable extension
         uint256 tokenIdBatchHead = _getBatchHead(tokenId);
         return _owners[tokenIdBatchHead];
     }
@@ -342,23 +361,25 @@ contract ERC721Psi is IERC721Psi {
     function _safeMint(
         address to,
         uint256 quantity,
+        uint256 startTimestamp,
         bool giftable,
         uint256 percentage,
-        uint256 daysValid
+        uint256 numOfBlocks
     ) internal virtual {
-        _safeMint(to, quantity, giftable, percentage, daysValid, "");
+        _safeMint(to, quantity, startTimestamp, giftable, percentage, numOfBlocks, "");
     }
 
     function _safeMint(
         address to,
         uint256 quantity,
+        uint256 startTimestamp,
         bool giftable,
         uint256 percentage,
-        uint256 daysValid,
+        uint256 numOfBlocks,
         bytes memory _data
     ) internal virtual {
         uint256 nextTokenId = _nextTokenId();
-        _mint(to, quantity, giftable, percentage, daysValid);
+        _mint(to, quantity, startTimestamp, giftable, percentage, numOfBlocks);
         require(
             _checkOnERC721Received(address(0), to, nextTokenId, quantity, _data),
             "ERC721Psi: transfer to non ERC721Receiver implementer"
@@ -368,29 +389,30 @@ contract ERC721Psi is IERC721Psi {
     function _mint(
         address to,
         uint256 quantity,
+        uint256 startTimestamp,
         bool giftable,
         uint256 percentage,
-        uint256 daysValid
+        uint256 numOfBlocks
     ) internal virtual {
-        uint256 nextTokenId = _nextTokenId();
+        uint256 nextTokenId = _nextTokenId();                                       // cold SLOAD
 
         require(quantity > 0, "ERC721Psi: quantity must be greater 0");
         require(to != address(0), "ERC721Psi: mint to the zero address");
         require(percentage > 0 && percentage < 101, "ERC721Psi: invalid percentage");
-        require(daysValid > 0 && daysValid < 65536, "ERC721Psi: invalid days");
+        require(numOfBlocks > 0 && numOfBlocks < 65536, "ERC721Psi: invalid number of blocks");
 
         _beforeTokenTransfers(address(0), to, nextTokenId, quantity);
-        _currentIndex += quantity;
+        _currentIndex += quantity;                                                  // warm SSTORE(2), if index is 0 warm SSTORE(1)
 
-        _owners[nextTokenId] = CouponInfo({
+        _owners[nextTokenId] = CouponInfo({                                         // cold SSTORE(1)
             owner: to,
-            startTimestamp: uint64(block.timestamp),
+            startTimestamp: uint64(startTimestamp),
             giftable: giftable,
             percentage: uint8(percentage),
-            daysValid: uint16(daysValid)
+            numOfBlocks: uint16(numOfBlocks)
         });
 
-        _batchHead.set(nextTokenId);
+        _batchHead.set(nextTokenId);                                                // cold SSTORE(2), if bucket is empty cold SSTORE(1) 
 
         uint256 toMasked;
         uint256 end = nextTokenId + quantity;
@@ -462,17 +484,17 @@ contract ERC721Psi is IERC721Psi {
 
         // If subsequent token id is 0 and within limit, save information about original owner
         if(!_batchHead.get(subsequentTokenId) &&  
-            subsequentTokenId < _nextTokenId()
+            subsequentTokenId < _nextTokenId()                                      // warm SLOAD
         ) {
-            _owners[subsequentTokenId] = couponInfo;                     // cold SSTORE
-            _batchHead.set(subsequentTokenId);
+            _owners[subsequentTokenId] = couponInfo;                                // cold SSTORE(1)
+            _batchHead.set(subsequentTokenId);                                      // warm SSTORE(2), if bucket is empty warm SSTORE(1)
         }
 
-        _owners[tokenId].owner = to;
+        _owners[tokenId].owner = to;                                                // cold SSTORE(1), if id is batch head warm SSTORE(2)
 
         // If id being transferred have 0 in BitMap i.e. is not head of the batch
         if(tokenId != tokenIdBatchHead) {
-            _batchHead.set(tokenId);
+            _batchHead.set(tokenId);                                                // warm SSTORE(3), if id is in end of bucket warm SSTORE(2)
         }
 
         emit Transfer(from, to, tokenId);
@@ -708,13 +730,18 @@ contract ERC721Psi is IERC721Psi {
      * Emits a {Transfer} event.
      */
     function _burn(uint256 tokenId) internal virtual {
-        address from = ownerOf(tokenId);
-        _beforeTokenTransfers(from, address(0), tokenId, 1);
+ 
+        (CouponInfo memory couponInfo,) = _couponInfoAndBatchHeadOf(tokenId);
+
+        // Revert if coupon expired
+        require(couponInfo.startTimestamp + couponInfo.numOfBlocks * _BLOCK_DURATION >= block.timestamp, "ERC721Psi: coupon expired");
+
+        _beforeTokenTransfers(couponInfo.owner, address(0), tokenId, 1);
         _burnedToken.set(tokenId);
         
-        emit Transfer(from, address(0), tokenId);
+        emit Transfer(couponInfo.owner, address(0), tokenId);
 
-        _afterTokenTransfers(from, address(0), tokenId, 1);
+        _afterTokenTransfers(couponInfo.owner, address(0), tokenId, 1);
     }
 
     /**

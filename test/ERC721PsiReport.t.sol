@@ -5,66 +5,69 @@ import { ERC721Psi } from 'src/ERC721Psi.sol';
 import { User } from './User.sol';
 import 'forge-std/Test.sol';
 
-contract ERC721PsiTest is ERC721Psi, Test {
+import 'forge-std/console.sol';
 
-    constructor() ERC721Psi('Test', 'Test'){}
+contract ERC721PsiTest is ERC721Psi, Test {
 
     User public user1;
     User public user2;
+    uint256 oneDay = 86400;
+
+    constructor() ERC721Psi('Test', 'Test', oneDay) {}
 
     function setUp() public {
         user1 = new User(address(this));
         user2 = new User(address(this));
 
         // Setup
-        super._mint(address(this), 1, false, 10, 100);          // Bypass warm SSTORE(1) for currentIndex
-        super._mint(address(user1), 10000, true, 10, 100);
+        super._mint(address(this), 1, block.timestamp, false, 10, 100);         // Bypass warm SSTORE(1) for currentIndex
+        super._mint(address(user1), 10000, block.timestamp, true, 10, 100);
 
         user1.__ERC721Psi__operatorApproval(address(user2));
     }
 
     function test__ERC721Psi_Mint_00001() public {
-        super._mint(msg.sender, 1, false, 10, 100);
+        super._mint(msg.sender, 1, block.timestamp, false, 10, 100);
     }
 
     function test__ERC721Psi_Mint_00005() public {
-        super._mint(msg.sender, 5, true, 10, 50);
+        super._mint(msg.sender, 5, block.timestamp, true, 10, 50);
     }
 
     function test__ERC721Psi_Mint_00010() public {
-        super._mint(msg.sender, 10, true, 10, 50);
+        super._mint(msg.sender, 10, block.timestamp, true, 10, 50);
     }
 
     function test__ERC721Psi_Mint_00050() public {
-        super._mint(msg.sender, 50, true, 10, 50);
+        super._mint(msg.sender, 50, block.timestamp, true, 10, 50);
     }
 
     function test__ERC721Psi_Mint_00100() public {
-        super._mint(msg.sender, 100, true, 10, 50);
+        super._mint(msg.sender, 100, block.timestamp, true, 10, 50);
     }
 
     function test__ERC721Psi_Mint_00200() public {
-        super._mint(msg.sender, 200, true, 10, 50);
+        super._mint(msg.sender, 200, block.timestamp, true, 10, 50);
     }
 
     function test__ERC721Psi_Mint_00500() public {
-        super._mint(msg.sender, 500, true, 10, 50);
+        super._mint(msg.sender, 500, block.timestamp, true, 10, 50);
     }
 
     function test__ERC721Psi_Mint_01000() public {
-        super._mint(msg.sender, 1000, true, 10, 50);
+        super._mint(msg.sender, 1000, block.timestamp, true, 10, 50);
     }
 
     function test__ERC721Psi_Mint_02000() public {
-        super._mint(msg.sender, 2000, true, 10, 50);
+        super._mint(msg.sender, 2000, block.timestamp, true, 10, 50);
     }
 
     function test__ERC721Psi_Mint_05000() public {
-        super._mint(msg.sender, 5000, true, 10, 50);
+        super._mint(msg.sender, 5000, block.timestamp, true, 10, 50);
     }
 
     function test__ERC721Psi_Mint_10000() public {
-        super._mint(msg.sender, 10000, true, 10, 50);
+        super._mint(msg.sender, 10000, block.timestamp, true, 10, 50);
     }
 
     function test__ERC721Psi_Transfer_ID_00001() public {

@@ -43,8 +43,8 @@ contract ERC721Psi is IERC721Psi {
     // The bit position of `percentage` in packed ownership.
     uint256 private constant _BITPOS_PERCENTAGE = 232;
 
-    // The bit position of `daysValid` in packed ownership.
-    uint256 private constant _BITPOS_DAYS_VALID = 240;
+    // The bit position of `numOfBlocks` in packed ownership.
+    uint256 private constant _BITPOS_NUM_OF_BLOCKS = 240;
 
     using BitMaps for BitMaps.BitMap;
 
@@ -52,6 +52,9 @@ contract ERC721Psi is IERC721Psi {
 
     string private _name;
     string private _symbol;
+
+    // Time blocks
+    uint256 immutable _BLOCK_DURATION;
 
     // Mapping from token ID to owner address
     mapping(uint256 => uint256) internal _owners;
@@ -68,9 +71,10 @@ contract ERC721Psi is IERC721Psi {
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
      */
-    constructor(string memory name_, string memory symbol_) {
+    constructor(string memory name_, string memory symbol_, uint256 _blockDuration) {
         _name = name_;
         _symbol = symbol_;
+        _BLOCK_DURATION = _blockDuration;
         _currentIndex = _startTokenId();
     }
 
@@ -96,7 +100,6 @@ contract ERC721Psi is IERC721Psi {
     function _totalMinted() internal view virtual returns (uint256) {
         return _currentIndex - _startTokenId();
     }
-
 
     /**
      * @dev See {IERC165-supportsInterface}.
@@ -143,6 +146,7 @@ contract ERC721Psi is IERC721Psi {
     }
 
     function _ownershipOf(uint256 tokenId) internal view returns (CouponInfo memory ownership) {
+        require(_exists(tokenId), "ERC721Psi: owner query for nonexistent token");  // 2 * cold SLOAD, with burnable extension
         uint256 tokenIdBatchHead = _getBatchHead(tokenId);
         uint256 packedOwnership = _owners[tokenIdBatchHead];
 
@@ -150,7 +154,7 @@ contract ERC721Psi is IERC721Psi {
         ownership.startTimestamp = uint64(packedOwnership >> _BITPOS_START_TIMESTAMP);
         ownership.giftable = packedOwnership & _BITMASK_GIFTABLE != 0;
         ownership.percentage = uint8(packedOwnership >> _BITPOS_PERCENTAGE);
-        ownership.daysValid = uint16(packedOwnership >> _BITPOS_DAYS_VALID);
+        ownership.numOfBlocks = uint16(packedOwnership >> _BITPOS_NUM_OF_BLOCKS);
     }
 
 
@@ -363,23 +367,25 @@ contract ERC721Psi is IERC721Psi {
     function _safeMint(
         address to,
         uint256 quantity,
+        uint256 startTimestamp,
         bool giftable,
         uint256 percentage,
-        uint256 daysValid
+        uint256 numOfBlocks
     ) internal virtual {
-        _safeMint(to, quantity, giftable, percentage, daysValid, "");
+        _safeMint(to, quantity, startTimestamp, giftable, percentage, numOfBlocks, "");
     }
 
     function _safeMint(
         address to,
         uint256 quantity,
+        uint256 startTimestamp,
         bool giftable,
         uint256 percentage,
-        uint256 daysValid,
+        uint256 numOfBlocks,
         bytes memory _data
     ) internal virtual {
         uint256 nextTokenId = _nextTokenId();
-        _mint(to, quantity, giftable, percentage, daysValid);
+        _mint(to, quantity, startTimestamp, giftable, percentage, numOfBlocks);
         require(
             _checkOnERC721Received(address(0), to, nextTokenId, quantity, _data),
             "ERC721Psi: transfer to non ERC721Receiver implementer"
@@ -389,16 +395,17 @@ contract ERC721Psi is IERC721Psi {
     function _mint(
         address to,
         uint256 quantity,
+        uint256 startTimestamp,
         bool giftable,
         uint256 percentage,
-        uint256 daysValid
+        uint256 numOfBlocks
     ) internal virtual {
         uint256 nextTokenId = _nextTokenId();                                       // cold SLOAD
 
         require(quantity > 0, "ERC721Psi: quantity must be greater 0");
         require(to != address(0), "ERC721Psi: mint to the zero address");
         require(percentage > 0 && percentage < 101, "ERC721Psi: invalid percentage");
-        require(daysValid > 0 && daysValid < 65536, "ERC721Psi: invalid days");
+        require(numOfBlocks > 0 && numOfBlocks < 65536, "ERC721Psi: invalid number of blocks");
 
         _beforeTokenTransfers(address(0), to, nextTokenId, quantity);
         _currentIndex += quantity;                                                  // warm SSTORE(2), if index is 0 warm SSTORE(1)
@@ -406,10 +413,10 @@ contract ERC721Psi is IERC721Psi {
         uint256 result;
         assembly {
             result := and(to, _BITMASK_ADDRESS)
-            result := or(result, shl(_BITPOS_START_TIMESTAMP, timestamp()))
+            result := or(result, shl(_BITPOS_START_TIMESTAMP, startTimestamp))
             result := or(result, shl(_BITPOS_GIFTABLE, giftable))
             result := or(result, shl(_BITPOS_PERCENTAGE, percentage))
-            result := or(result, shl(_BITPOS_DAYS_VALID, daysValid))
+            result := or(result, shl(_BITPOS_NUM_OF_BLOCKS, numOfBlocks))
         }
         _owners[nextTokenId] = result;                                              // cold SSTORE(1)
 
@@ -737,7 +744,16 @@ contract ERC721Psi is IERC721Psi {
      * Emits a {Transfer} event.
      */
     function _burn(uint256 tokenId) internal virtual {
-        address from = ownerOf(tokenId);
+ 
+        (uint256 packedOwnership,) = _packedOwnershipAndBatchHeadOf(tokenId);
+        address from = address(uint160(packedOwnership));
+
+        // Revert if coupon expired
+        uint256 startTimestamp = uint64(packedOwnership >> _BITPOS_START_TIMESTAMP);
+        uint256 numOfBlocks = uint16(packedOwnership >> _BITPOS_NUM_OF_BLOCKS);
+
+        require(startTimestamp + numOfBlocks * _BLOCK_DURATION >= block.timestamp, "ERC721Psi: coupon expired");
+
         _beforeTokenTransfers(from, address(0), tokenId, 1);
         _burnedToken.set(tokenId);
         
