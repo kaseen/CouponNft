@@ -18,15 +18,25 @@ contract ERC721ATest is ERC721A, Test {
         user2 = new User(address(this));
 
         // Setup
-        super._mint(address(this), 1, block.timestamp, false, 10, 1000);         // Bypass warm SSTORE(1) for currentIndex
-        super._mint(address(user1), 10000, block.timestamp, true, 10, 100);
+        super._mint(address(this), 1, block.timestamp, false, 10, 1000);        // Initialize _currentIndex
+        super._burn(0);                                                         // Initialize _burnCounter
+        super._mint(address(user1), 10001, block.timestamp, true, 10, 100);
         super._mint(address(user1), 1, block.timestamp, true, 10, 100);
 
         user1.__ERC721A__operatorApproval(address(user2));
     }
 
+    // _packedAddressData is uninitialized, cost of a SSTORE(1) is accrued, instead of a SSTORE(2)
     function test__ERC721A_Mint_00001() public {
-        super._mint(msg.sender, 1, block.timestamp, true, 10, 100);
+        super._mint(msg.sender, 1, block.timestamp, true, 10, 50);
+    }
+
+    function test__ERC721A_Mint_00002() public {
+        super._mint(msg.sender, 2, block.timestamp, true, 10, 50);
+    }
+
+    function test__ERC721A_Mint_00003() public {
+        super._mint(msg.sender, 3, block.timestamp, true, 10, 50);
     }
 
     function test__ERC721A_Mint_00005() public {
@@ -37,127 +47,103 @@ contract ERC721ATest is ERC721A, Test {
         super._mint(msg.sender, 10, block.timestamp, true, 10, 50);
     }
 
-    function test__ERC721A_Mint_00050() public {
-        super._mint(msg.sender, 50, block.timestamp, true, 10, 50);
+    function test__ERC721A_Mint_00020() public {
+        super._mint(msg.sender, 20, block.timestamp, true, 10, 50);
     }
 
     function test__ERC721A_Mint_00100() public {
         super._mint(msg.sender, 100, block.timestamp, true, 10, 50);
     }
 
-    function test__ERC721A_Mint_00200() public {
-        super._mint(msg.sender, 200, block.timestamp, true, 10, 50);
-    }
-
-    function test__ERC721A_Mint_00500() public {
-        super._mint(msg.sender, 500, block.timestamp, true, 10, 50);
-    }
-
     function test__ERC721A_Mint_01000() public {
         super._mint(msg.sender, 1000, block.timestamp, true, 10, 50);
-    }
-
-    function test__ERC721A_Mint_02000() public {
-        super._mint(msg.sender, 2000, block.timestamp, true, 10, 50);
-    }
-
-    function test__ERC721A_Mint_05000() public {
-        super._mint(msg.sender, 5000, block.timestamp, true, 10, 50);
     }
 
     function test__ERC721A_Mint_10000() public {
         super._mint(msg.sender, 10000, block.timestamp, true, 10, 50);
     }
 
-    function test__ERC721A_Transfer_ID_00001() public {
+    function test__ERC721A_Transfer_Distance_00000() public {
         user1.__ERC721A__transferTo(address(user2), 1);
     }
 
-    function test__ERC721A_Transfer_ID_00005() public {
-        user1.__ERC721A__transferTo(address(user2), 5);
+    function test__ERC721A_Transfer_Distance_00001() public {
+        user1.__ERC721A__transferTo(address(user2), 2);
     }
 
-    function test__ERC721A_Transfer_ID_00010() public {
-        user1.__ERC721A__transferTo(address(user2), 10);
+    function test__ERC721A_Transfer_Distance_00002() public {
+        user1.__ERC721A__transferTo(address(user2), 3);
+    }
+
+    function test__ERC721A_Transfer_Distance_00003() public {
+        user1.__ERC721A__transferTo(address(user2), 4);
+    }
+
+    function test__ERC721A_Transfer_Distance_00005() public {
+        user1.__ERC721A__transferTo(address(user2), 6);
+    }
+
+    function test__ERC721A_Transfer_Distance_00010() public {
+        user1.__ERC721A__transferTo(address(user2), 11);
     }
     
-    function test__ERC721A_Transfer_ID_00050() public {
-        user1.__ERC721A__transferTo(address(user2), 50);
+    function test__ERC721A_Transfer_Distance_00020() public {
+        user1.__ERC721A__transferTo(address(user2), 21);
     }
 
-    function test__ERC721A_Transfer_ID_00100() public {
-        user1.__ERC721A__transferTo(address(user2), 100);
+    function test__ERC721A_Transfer_Distance_00100() public {
+        user1.__ERC721A__transferTo(address(user2), 101);
     }
 
-    function test__ERC721A_Transfer_ID_00200() public {
-        user1.__ERC721A__transferTo(address(user2), 200);
+    function test__ERC721A_Transfer_Distance_01000() public {
+        user1.__ERC721A__transferTo(address(user2), 1001);
     }
 
-    function test__ERC721A_Transfer_ID_00500() public {
-        user1.__ERC721A__transferTo(address(user2), 500);
-    }
-
-    function test__ERC721A_Transfer_ID_01000() public {
-        user1.__ERC721A__transferTo(address(user2), 1000);
-    }
-
-    function test__ERC721A_Transfer_ID_02000() public {
-        user1.__ERC721A__transferTo(address(user2), 2000);
-    }
-
-    function test__ERC721A_Transfer_ID_05000() public {
-        user1.__ERC721A__transferTo(address(user2), 5000);
-    }
-
-    function test__ERC721A_Transfer_ID_10000() public {
-        user1.__ERC721A__transferTo(address(user2), 10000);
-    }
-
-    function test__ERC721A_Transfer_Initialized() public {
+    function test__ERC721A_Transfer_Distance_10000() public {
         user1.__ERC721A__transferTo(address(user2), 10001);
     }
 
-    function test__ERC721A_Burn_ID_00001() public {
+    function test__ERC721A_Transfer_Initialized() public {
+        user1.__ERC721A__transferTo(address(user2), 10002);
+    }
+
+    function test__ERC721A_Burn_Distance_00000() public {
         super._burn(1);
     }
 
-    function test__ERC721A_Burn_ID_00005() public {
-        super._burn(5);
+    function test__ERC721A_Burn_Distance_00001() public {
+        super._burn(2);
     }
 
-    function test__ERC721A_Burn_ID_00010() public {
-        super._burn(10);
+    function test__ERC721A_Burn_Distance_00002() public {
+        super._burn(3);
     }
 
-    function test__ERC721A_Burn_ID_00050() public {
-        super._burn(50);
+    function test__ERC721A_Burn_Distance_00003() public {
+        super._burn(4);
     }
 
-    function test__ERC721A_Burn_ID_00100() public {
-        super._burn(100);
+    function test__ERC721A_Burn_Distance_00005() public {
+        super._burn(6);
     }
 
-    function test__ERC721A_Burn_ID_00200() public {
-        super._burn(200);
+    function test__ERC721A_Burn_Distance_00010() public {
+        super._burn(11);
     }
 
-    function test__ERC721A_Burn_ID_00500() public {
-        super._burn(500);
+    function test__ERC721A_Burn_Distance_00020() public {
+        super._burn(21);
     }
 
-    function test__ERC721A_Burn_ID_01000() public {
-        super._burn(1000);
+    function test__ERC721A_Burn_Distance_00100() public {
+        super._burn(101);
     }
 
-    function test__ERC721A_Burn_ID_02000() public {
-        super._burn(2000);
+    function test__ERC721A_Burn_Distance_01000() public {
+        super._burn(1001);
     }
 
-    function test__ERC721A_Burn_ID_05000() public {
-        super._burn(5000);
-    }
-
-    function test__ERC721A_Burn_ID_10000() public {
-        super._burn(10000);
+    function test__ERC721A_Burn_Distance_10000() public {
+        super._burn(10001);
     }
 }

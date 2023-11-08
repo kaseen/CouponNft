@@ -35,11 +35,19 @@ contract NeonCouponTest is NeonMarket, Test {
         user1 = new User(address(this));
         user2 = new User(address(this));
 
-        mintMultipleForUser(address(user1), 1);              // Bypass cold SSTORE(1) for ID 0
+        mintMultipleForUser(address(user1), 1);              // Initialize volume
     }
 
     function test__Neon_Mint_00001() public {
         mintMultipleForUser(msg.sender, 1);
+    }
+
+    function test__Neon_Mint_00002() public {
+        mintMultipleForUser(msg.sender, 2);
+    }
+
+    function test__Neon_Mint_00003() public {
+        mintMultipleForUser(msg.sender, 3);
     }
 
     function test__Neon_Mint_00005() public {
@@ -50,32 +58,16 @@ contract NeonCouponTest is NeonMarket, Test {
         mintMultipleForUser(msg.sender, 10);
     }
 
-    function test__Neon_Mint_00050() public {
-        mintMultipleForUser(msg.sender, 50);
+    function test__Neon_Mint_00020() public {
+        mintMultipleForUser(msg.sender, 20);
     }
 
     function test__Neon_Mint_00100() public {
         mintMultipleForUser(msg.sender, 100);
     }
 
-    function test__Neon_Mint_00200() public {
-        mintMultipleForUser(msg.sender, 200);
-    }
-
-    function test__Neon_Mint_00500() public {
-        mintMultipleForUser(msg.sender, 500);
-    }
-
     function test__Neon_Mint_01000() public {
         mintMultipleForUser(msg.sender, 1000);
-    }
-
-    function test__Neon_Mint_02000() public {
-        mintMultipleForUser(msg.sender, 2000);
-    }
-
-    function test__Neon_Mint_05000() public {
-        mintMultipleForUser(msg.sender, 5000);
     }
 
     function test__Neon_Mint_10000() public {
