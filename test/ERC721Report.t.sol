@@ -7,12 +7,16 @@ import 'forge-std/Test.sol';
 
 contract ERC721Test is ERC721, Test {
 
-    User public user1;
-    User public user2;
-    User public user3;
+    User immutable user1;
+    User immutable user2;
+    User immutable user3;
     uint256 oneDay = 86400;
 
-    constructor() ERC721('Test', 'Test', oneDay) {}
+    constructor() ERC721('Test', 'Test', oneDay) {
+        user1 = new User(address(this));    // User with 2 tokens
+        user2 = new User(address(this));    // User with 1 token
+        user3 = new User(address(this));    // User with 0 tokens
+    }
 
     function mintMultipleForUser(address user, uint256 amount) private {
         for(uint256 i; i < amount; ++i)
@@ -20,52 +24,51 @@ contract ERC721Test is ERC721, Test {
     }
 
     function setUp() public {
-        user1 = new User(address(this));
-        user2 = new User(address(this));
-        user3 = new User(address(this));
-
-        // Setup
         super._mint(address(this), block.timestamp, true, 10, 100);     // Initialize _currentIndex
-        super._mint(address(user1), block.timestamp, true, 10, 100);
-        super._mint(address(user1), block.timestamp, true, 10, 100);
-        super._mint(address(user2), block.timestamp, true, 10, 100);
+        mintMultipleForUser(address(user1), 2);                         // Initialize user1 balance
+        super._mint(address(user2), block.timestamp, true, 10, 100);    // Initialize user2 balance
     }
 
-    // _balances is uninitialized, cost of a SSTORE(1) is accrued, instead of a SSTORE(2)
+    // _balances are uninitialized, cost of a SSTORE(1) is accrued, instead of a SSTORE(2)
     function test__ERC721_Mint_00001() public {
-        mintMultipleForUser(msg.sender, 1);
+        mintMultipleForUser(address(user3), 1);
     }
 
     function test__ERC721_Mint_00002() public {
-        mintMultipleForUser(msg.sender, 2);
+        mintMultipleForUser(address(user3), 2);
     }
 
     function test__ERC721_Mint_00003() public {
-        mintMultipleForUser(msg.sender, 3);
+        mintMultipleForUser(address(user3), 3);
     }
 
     function test__ERC721_Mint_00005() public {
-        mintMultipleForUser(msg.sender, 5);
+        mintMultipleForUser(address(user3), 5);
     }
 
     function test__ERC721_Mint_00010() public {
-        mintMultipleForUser(msg.sender, 10);
+        mintMultipleForUser(address(user3), 10);
     }
 
     function test__ERC721_Mint_00020() public {
-        mintMultipleForUser(msg.sender, 20);
+        mintMultipleForUser(address(user3), 20);
     }
 
     function test__ERC721_Mint_00100() public {
-        mintMultipleForUser(msg.sender, 100);
+        mintMultipleForUser(address(user3), 100);
     }
 
     function test__ERC721_Mint_01000() public {
-        mintMultipleForUser(msg.sender, 1000);
+        mintMultipleForUser(address(user3), 1000);
     }
 
     function test__ERC721_Mint_10000() public {
-        mintMultipleForUser(msg.sender, 10000);
+        mintMultipleForUser(address(user3), 10000);
+    }
+
+    // Specific mint scenario
+    function test__ERC721_Mint_NonZero_1() public {
+        mintMultipleForUser(address(user1), 1);
     }
 
     function test__ERC721_Transfer_Scenario1_SSTORE3_SSTORE2() public {
