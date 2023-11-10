@@ -13,6 +13,12 @@ contract NeonCouponTest is NeonMarket, Test {
     User immutable user1;
     User immutable user2;
 
+    address immutable coupon1;
+    address immutable coupon2;
+    address immutable coupon3;
+    address immutable coupon4;
+    address immutable coupon5;
+
     // For calculation of deployment cost
     function /*test__*/getCreationCode() public view {
         bytes memory result = vm.getCode('out/NeonCoupon.sol/NeonCoupon.json');
@@ -27,17 +33,20 @@ contract NeonCouponTest is NeonMarket, Test {
     constructor() {
         user1 = new User(address(this));
         user2 = new User(address(this));
+
+        mintMultipleForUser(address(user1), 5);              // Initialize volume and user1 balance
+
+        coupon1 = super.getCouponAddrByID(1);
+        coupon2 = super.getCouponAddrByID(2);
+        coupon3 = super.getCouponAddrByID(3);
+        coupon4 = super.getCouponAddrByID(4);
+        coupon5 = super.getCouponAddrByID(5);
     }
 
     function mintMultipleForUser(address user, uint256 amount) private {
         for(uint256 i; i < amount; ++i){
             super.createCoupon(user, block.timestamp, block.timestamp + 100000, 10);
-            volume++;
         }
-    }
-
-    function setUp() public {
-        mintMultipleForUser(address(user1), 1);              // Initialize volume and user1 balance
     }
 
     function test__Neon_Mint_00001() public {
@@ -77,12 +86,41 @@ contract NeonCouponTest is NeonMarket, Test {
     }
 
     function test__Neon_Transfer() public {
-        address couponAddress = super.getCouponAddrByID(1);
-        user1.__NeonCoupon__transferTo(address(user2), couponAddress);
+        user1.__NeonCoupon__transferTo(address(user2), coupon1);
     }
 
     function test__Neon_Burn() public {
-        address couponAddress = getCouponAddrByID(1);
-        user1.__NeonCoupon__burn(couponAddress);
+        user1.__NeonCoupon__burn(coupon1);
+    }
+
+    // Burning multiple tokens
+    function test__ERC721Psi_BurnMultiple_1() public {
+        user1.__NeonCoupon__burn(coupon1);
+    }
+
+    function test__ERC721Psi_BurnMultiple_2() public {
+        user1.__NeonCoupon__burn(coupon1);
+        user1.__NeonCoupon__burn(coupon2);
+    }
+
+    function test__ERC721Psi_BurnMultiple_3() public {
+        user1.__NeonCoupon__burn(coupon1);
+        user1.__NeonCoupon__burn(coupon2);
+        user1.__NeonCoupon__burn(coupon3);
+    }
+
+    function test__ERC721Psi_BurnMultiple_4() public {
+        user1.__NeonCoupon__burn(coupon1);
+        user1.__NeonCoupon__burn(coupon2);
+        user1.__NeonCoupon__burn(coupon3);
+        user1.__NeonCoupon__burn(coupon4);
+    }
+
+    function test__ERC721Psi_BurnMultiple_5() public {
+        user1.__NeonCoupon__burn(coupon1);
+        user1.__NeonCoupon__burn(coupon2);
+        user1.__NeonCoupon__burn(coupon3);
+        user1.__NeonCoupon__burn(coupon4);
+        user1.__NeonCoupon__burn(coupon5);
     }
 }

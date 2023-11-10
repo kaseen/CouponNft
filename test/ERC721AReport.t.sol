@@ -157,4 +157,35 @@ contract ERC721ATest is ERC721A, Test {
     function test__ERC721A_Burn_Distance_10000() public {
         super._burn(10001);
     }
+
+    // Burning multiple tokens
+    function test__ERC721A_BurnMultiple_1() public {
+        super._burn(1);
+    }
+
+    function test__ERC721A_BurnMultiple_2() public {
+        super._burn(1);
+        super._burn(2);
+    }
+
+    function test__ERC721A_BurnMultiple_3() public {
+        super._burn(1);
+        super._burn(2);
+        super._burn(3);
+    }
+
+    function test__ERC721A_BurnMultiple_4() public {
+        super._burn(1);
+        super._burn(2);
+        super._burn(3);
+        super._burn(4);
+    }
+
+    function test__ERC721A_BurnMultiple_5() public {
+        super._burn(1);
+        super._burn(2);
+        super._burn(3);
+        super._burn(4);
+        super._burn(5);
+    }
 }

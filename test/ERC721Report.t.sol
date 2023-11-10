@@ -13,7 +13,7 @@ contract ERC721Test is ERC721, Test {
     uint256 oneDay = 86400;
 
     constructor() ERC721('Test', 'Test', oneDay) {
-        user1 = new User(address(this));    // User with 2 tokens
+        user1 = new User(address(this));    // User with 5 tokens
         user2 = new User(address(this));    // User with 1 token
         user3 = new User(address(this));    // User with 0 tokens
     }
@@ -25,7 +25,7 @@ contract ERC721Test is ERC721, Test {
 
     function setUp() public {
         super._mint(address(this), block.timestamp, true, 10, 100);     // Initialize _currentIndex
-        mintMultipleForUser(address(user1), 2);                         // Initialize user1 balance
+        mintMultipleForUser(address(user1), 5);                         // Initialize user1 balance
         super._mint(address(user2), block.timestamp, true, 10, 100);    // Initialize user2 balance
     }
 
@@ -72,7 +72,7 @@ contract ERC721Test is ERC721, Test {
     }
 
     function test__ERC721_Transfer_Scenario1_SSTORE3_SSTORE2() public {
-        user2.__ERC721__transferTo(address(user1), 3);
+        user2.__ERC721__transferTo(address(user1), 6);
     }
 
     function test__ERC721_Transfer_Scenario2_SSTORE2_SSTORE2() public {
@@ -80,7 +80,7 @@ contract ERC721Test is ERC721, Test {
     }
 
     function test__ERC721_Transfer_Scenario3_SSTORE3_SSTORE1() public {
-        user2.__ERC721__transferTo(address(user3), 3);
+        user2.__ERC721__transferTo(address(user3), 6);
     }
 
     function test__ERC721_Transfer_Scenario4_SSTORE2_SSTORE1() public {
@@ -88,10 +88,41 @@ contract ERC721Test is ERC721, Test {
     }
 
     function test__ERC721_Burn_Scenario1() public {
-        super._burn(3);
+        super._burn(6);
     }
 
     function test__ERC721_Burn_Scenario2() public {
         super._burn(2);
+    }
+
+    // Burning multiple tokens
+    function test__ERC721_BurnMultiple_1() public {
+        super._burn(1);
+    }
+
+    function test__ERC721_BurnMultiple_2() public {
+        super._burn(1);
+        super._burn(2);
+    }
+
+    function test__ERC721_BurnMultiple_3() public {
+        super._burn(1);
+        super._burn(2);
+        super._burn(3);
+    }
+
+    function test__ERC721_BurnMultiple_4() public {
+        super._burn(1);
+        super._burn(2);
+        super._burn(3);
+        super._burn(4);
+    }
+
+    function test__ERC721_BurnMultiple_5() public {
+        super._burn(1);
+        super._burn(2);
+        super._burn(3);
+        super._burn(4);
+        super._burn(5);
     }
 }
