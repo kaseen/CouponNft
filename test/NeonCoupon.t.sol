@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-//import { NeonCoupon } from 'src/NeonCoupon.sol';
 import { NeonMarket } from './NeonMarket.sol';
 import { User } from './User.sol';
-import 'forge-std/Test.sol';
-
-import 'forge-std/console.sol';
+import { Test, console } from 'forge-std/Test.sol';
 
 contract NeonCouponTest is NeonMarket, Test {
 
@@ -94,29 +91,29 @@ contract NeonCouponTest is NeonMarket, Test {
     }
 
     // Burning multiple tokens
-    function test__ERC721Psi_BurnMultiple_1() public {
+    function test__Neon_BurnMultiple_1() public {
         user1.__NeonCoupon__burn(coupon1);
     }
 
-    function test__ERC721Psi_BurnMultiple_2() public {
+    function test__Neon_BurnMultiple_2() public {
         user1.__NeonCoupon__burn(coupon1);
         user1.__NeonCoupon__burn(coupon2);
     }
 
-    function test__ERC721Psi_BurnMultiple_3() public {
+    function test__Neon_BurnMultiple_3() public {
         user1.__NeonCoupon__burn(coupon1);
         user1.__NeonCoupon__burn(coupon2);
         user1.__NeonCoupon__burn(coupon3);
     }
 
-    function test__ERC721Psi_BurnMultiple_4() public {
+    function test__Neon_BurnMultiple_4() public {
         user1.__NeonCoupon__burn(coupon1);
         user1.__NeonCoupon__burn(coupon2);
         user1.__NeonCoupon__burn(coupon3);
         user1.__NeonCoupon__burn(coupon4);
     }
 
-    function test__ERC721Psi_BurnMultiple_5() public {
+    function test__Neon_BurnMultiple_5() public {
         user1.__NeonCoupon__burn(coupon1);
         user1.__NeonCoupon__burn(coupon2);
         user1.__NeonCoupon__burn(coupon3);
